@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F8FAFC;
+    color: #1E293B;
+    line-height: 1.6;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-card rounded-2xl;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-600 to-primary-500;
+  }
+
+  .gradient-hero {
+    @apply bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900;
+  }
+
+  .gradient-card-blue {
+    @apply bg-gradient-to-br from-primary-500 to-primary-600;
+  }
+
+  .gradient-card-green {
+    @apply bg-gradient-to-br from-success-500 to-success-600;
+  }
+
+  .gradient-card-orange {
+    @apply bg-gradient-to-br from-warning-500 to-warning-600;
+  }
+
+  .gradient-card-red {
+    @apply bg-gradient-to-br from-danger-500 to-danger-600;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent;
+  }
+
+  .input-base {
+    @apply w-full px-4 py-2.5 bg-white border border-surface-200 rounded-xl text-surface-800
+           placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20
+           focus:border-primary-500 transition-all duration-200;
+  }
+
+  .btn-base {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium
+           text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .stat-card {
+    @apply glass-card-hover p-6 relative overflow-hidden;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-500 font-medium text-sm
+           transition-all duration-200 hover:bg-primary-50 hover:text-primary-600;
+  }
+
+  .sidebar-link-active {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm
+           bg-primary-50 text-primary-600 shadow-sm;
+  }
+
+  .table-header {
+    @apply px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider;
+  }
+
+  .table-cell {
+    @apply px-4 py-3.5 text-sm text-surface-700 whitespace-nowrap;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-surface-900 tracking-tight;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-surface-800;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: animateIn 0.3s ease-out forwards;
+  }
+
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .medical-bg {
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(245, 158, 11, 0.02) 0%, transparent 50%);
+  }
+}
