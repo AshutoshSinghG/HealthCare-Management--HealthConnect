@@ -16,6 +16,8 @@ router.use(authorise('PATIENT'));
  *   description: Patient self-service endpoints
  */
 
+router.get('/me/dashboard', patientController.getDashboard);
+
 /**
  * @swagger
  * /api/patients/me:

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Activity, Heart, Shield, Users, Stethoscope, UserPlus, CheckCircle } from 'lucide-react';
 import SignupForm from '../../components/auth/SignupForm';
+import { register as registerUser } from '../../api/authApi';
 import toast from 'react-hot-toast';
 
 const benefits = [
@@ -17,15 +18,43 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignup = async (data) => {
+  const handleSignup = async (formData) => {
     setLoading(true);
     try {
-      // In production: await authApi.register(data)
-      await new Promise(r => setTimeout(r, 1200));
+      // Split fullName into firstName and lastName for the backend
+      const nameParts = formData.fullName.trim().split(/\s+/);
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || firstName;
+
+      const payload = {
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        firstName,
+        lastName,
+        phoneNumber: formData.phone || '',
+      };
+
+      // Add patient-specific fields
+      if (formData.role === 'PATIENT') {
+        payload.dateOfBirth = formData.dateOfBirth;
+        payload.gender = formData.gender;
+      }
+
+      // Add doctor-specific fields
+      if (formData.role === 'DOCTOR') {
+        payload.specialisation = formData.specialisation;
+        payload.registrationNumber = formData.registrationNumber;
+        payload.contactEmail = formData.email;
+        payload.contactPhone = formData.phone || '';
+      }
+
+      await registerUser(payload);
       toast.success('Account created successfully! Please sign in.');
       navigate('/login');
     } catch (err) {
-      toast.error(err.message || 'Signup failed. Please try again.');
+      const message = err.response?.data?.message || err.message || 'Signup failed. Please try again.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

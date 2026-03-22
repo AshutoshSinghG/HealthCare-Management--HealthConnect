@@ -1,26 +1,41 @@
 import api from './axios';
 
 export const getPatientDashboard = async () => {
-  const { data } = await api.get('/patient/dashboard');
-  return data;
-};
-
-export const getMyTreatments = async (params) => {
-  const { data } = await api.get('/patient/treatments', { params });
-  return data;
-};
-
-export const getTreatmentById = async (id) => {
-  const { data } = await api.get(`/patient/treatments/${id}`);
-  return data;
-};
-
-export const getUnsuitableMedicines = async () => {
-  const { data } = await api.get('/patient/unsuitable-medicines');
-  return data;
+  const { data } = await api.get('/patients/me/dashboard');
+  return data.data;
 };
 
 export const getPatientProfile = async () => {
-  const { data } = await api.get('/patient/profile');
-  return data;
+  const { data } = await api.get('/patients/me');
+  return data.data;
+};
+
+export const updatePatientProfile = async (updates) => {
+  const { data } = await api.put('/patients/me', updates);
+  return data.data;
+};
+
+export const getMyTreatments = async (params) => {
+  const { data } = await api.get('/patients/me/treatments', { params });
+  return data.data;
+};
+
+export const getTreatmentById = async (id) => {
+  const { data } = await api.get(`/patients/me/treatments/${id}`);
+  return data.data;
+};
+
+export const getUnsuitableMedicines = async () => {
+  const { data } = await api.get('/patients/me/unsuitable-medicines');
+  return data.data;
+};
+
+export const exportPdf = async () => {
+  const response = await api.get('/patients/me/export/pdf', { responseType: 'blob' });
+  return response.data;
+};
+
+export const exportExcel = async () => {
+  const response = await api.get('/patients/me/export/excel', { responseType: 'blob' });
+  return response.data;
 };

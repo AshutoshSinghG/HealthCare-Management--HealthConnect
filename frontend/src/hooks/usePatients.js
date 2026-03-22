@@ -1,10 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { getPatientDashboard, getMyTreatments, getTreatmentById, getUnsuitableMedicines } from '../api/patientApi';
+import { getPatientDashboard, getMyTreatments, getTreatmentById, getUnsuitableMedicines, getPatientProfile } from '../api/patientApi';
 
 export const usePatientDashboard = () => {
   return useQuery({
     queryKey: ['patient', 'dashboard'],
     queryFn: getPatientDashboard,
+    retry: 1,
+  });
+};
+
+export const usePatientProfile = () => {
+  return useQuery({
+    queryKey: ['patient', 'profile'],
+    queryFn: getPatientProfile,
     retry: 1,
   });
 };

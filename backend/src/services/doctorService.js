@@ -96,4 +96,76 @@ const getPatientDetail = async (userId, patientId) => {
   return { patient, treatments: treatmentsWithMeds };
 };
 
-module.exports = { getProfile, getPatients, getPatientDetail };
+/**
+ * Get doctor dashboard data (profile + aggregated stats).
+ */
+const getDashboard = async (userId) => {
+  const doctor = await Doctor.findOne({ userId }).populate('userId', 'email role isActive');
+  if (!doctor) {
+    const err = new Error('Doctor profile not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const patientIds = await Treatment.distinct('patientId', { doctorId: doctor._id });
+
+  const [totalPatients, recentVisitsCount, flaggedMedicines, followUps] = await Promise.all([
+    Promise.resolve(patientIds.length),
+    Treatment.countDocuments({
+      doctorId: doctor._id,
+      visitDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+    }),
+    require('../models/UnsuitableMedicine').countDocuments({
+      flaggedByDoctorId: doctor._id,
+      isActive: true,
+    }),
+    Treatment.countDocuments({
+      doctorId: doctor._id,
+      followUpDate: { $gte: new Date() },
+      outcomeStatus: { $in: ['ONGOING', 'FOLLOW_UP'] },
+    }),
+  ]);
+
+  const recentPatients = await Patient.find({ _id: { $in: patientIds } })
+    .sort({ updatedAt: -1 })
+    .limit(5);
+
+  // Get latest treatment for each recent patient
+  const recentPatientsWithTreatment = await Promise.all(
+    recentPatients.map(async (p) => {
+      const lastTreatment = await Treatment.findOne({
+        patientId: p._id,
+        doctorId: doctor._id,
+      }).sort({ visitDate: -1 });
+      return {
+        ...p.toObject(),
+        lastTreatment: lastTreatment
+          ? { visitDate: lastTreatment.visitDate, diagnosis: lastTreatment.diagnosis, outcomeStatus: lastTreatment.outcomeStatus }
+          : null,
+      };
+    })
+  );
+
+  const pendingFollowups = await Treatment.find({
+    doctorId: doctor._id,
+    followUpDate: { $gte: new Date() },
+    outcomeStatus: { $in: ['ONGOING', 'FOLLOW_UP'] },
+  })
+    .populate('patientId', 'firstName lastName')
+    .sort({ followUpDate: 1 })
+    .limit(5);
+
+  return {
+    profile: doctor,
+    stats: {
+      totalPatients,
+      recentVisits: recentVisitsCount,
+      flaggedMedicines,
+      followupsRequired: followUps,
+    },
+    recentPatients: recentPatientsWithTreatment,
+    pendingFollowups,
+  };
+};
+
+module.exports = { getProfile, getPatients, getPatientDetail, getDashboard };

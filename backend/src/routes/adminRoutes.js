@@ -16,6 +16,20 @@ router.use(authorise('ADMIN'));
 
 /**
  * @swagger
+ * /api/admin/dashboard:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get admin dashboard stats
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard stats
+ */
+router.get('/dashboard', auditController.getDashboard);
+
+/**
+ * @swagger
  * /api/admin/audit-logs:
  *   get:
  *     tags: [Admin]

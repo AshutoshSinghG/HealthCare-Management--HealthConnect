@@ -37,4 +37,19 @@ const getPatientDetail = async (req, res, next) => {
   }
 };
 
-module.exports = { getProfile, getPatients, getPatientDetail };
+
+
+
+/**
+ * GET /doctors/me/dashboard
+ */
+const getDashboard = async (req, res, next) => {
+  try {
+    const result = await doctorService.getDashboard(req.user.userId);
+    return success(res, 'Doctor dashboard retrieved', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getProfile, getPatients, getPatientDetail, getDashboard };

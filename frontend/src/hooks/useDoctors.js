@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getDoctorDashboard, getPatients, getPatientDetail, getTreatmentsByPatient, getMedicationsByPatient } from '../api/doctorApi';
+import { getDoctorDashboard, getPatients, getPatientDetail } from '../api/doctorApi';
 
 export const useDoctorDashboard = () => {
   return useQuery({
@@ -22,24 +22,6 @@ export const usePatientDetail = (id) => {
     queryKey: ['doctor', 'patient', id],
     queryFn: () => getPatientDetail(id),
     enabled: !!id,
-    retry: 1,
-  });
-};
-
-export const usePatientTreatments = (patientId) => {
-  return useQuery({
-    queryKey: ['doctor', 'patient', patientId, 'treatments'],
-    queryFn: () => getTreatmentsByPatient(patientId),
-    enabled: !!patientId,
-    retry: 1,
-  });
-};
-
-export const usePatientMedications = (patientId) => {
-  return useQuery({
-    queryKey: ['doctor', 'patient', patientId, 'medications'],
-    queryFn: () => getMedicationsByPatient(patientId),
-    enabled: !!patientId,
     retry: 1,
   });
 };

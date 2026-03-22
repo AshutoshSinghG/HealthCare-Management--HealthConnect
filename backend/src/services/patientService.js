@@ -17,6 +17,48 @@ const getProfile = async (userId) => {
 };
 
 /**
+ * Get patient dashboard data (profile + aggregated stats).
+ */
+const getDashboard = async (userId) => {
+  const patient = await Patient.findOne({ userId }).populate('userId', 'email role isActive');
+  if (!patient) {
+    const err = new Error('Patient profile not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const [totalTreatments, unsuitableMeds, lastTreatment, recentTreatments] = await Promise.all([
+    Treatment.countDocuments({ patientId: patient._id }),
+    UnsuitableMedicine.countDocuments({ patientId: patient._id, isActive: true }),
+    Treatment.findOne({ patientId: patient._id }).sort({ visitDate: -1 }),
+    Treatment.find({ patientId: patient._id })
+      .populate('doctorId', 'firstName lastName specialisation')
+      .sort({ visitDate: -1 })
+      .limit(5),
+  ]);
+
+  // Count distinct active medications across all treatments
+  const treatmentIds = (await Treatment.find({ patientId: patient._id }).select('_id')).map(t => t._id);
+  const activeMedicationsCount = await Medication.countDocuments({ treatmentId: { $in: treatmentIds } });
+
+  const unsuitableMedicinesList = await UnsuitableMedicine.find({ patientId: patient._id, isActive: true })
+    .populate('flaggedByDoctorId', 'firstName lastName')
+    .limit(5);
+
+  return {
+    profile: patient,
+    stats: {
+      totalTreatments,
+      activeMedications: activeMedicationsCount,
+      flaggedMedicines: unsuitableMeds,
+      lastVisit: lastTreatment?.visitDate || null,
+    },
+    recentTreatments,
+    unsuitableMedicines: unsuitableMedicinesList,
+  };
+};
+
+/**
  * Update patient profile.
  */
 const updateProfile = async (userId, updates) => {
@@ -139,6 +181,7 @@ const getUnsuitableMedicines = async (userId) => {
 
 module.exports = {
   getProfile,
+  getDashboard,
   updateProfile,
   getTreatments,
   getTreatmentById,

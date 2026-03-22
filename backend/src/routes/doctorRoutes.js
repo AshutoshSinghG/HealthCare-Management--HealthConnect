@@ -18,6 +18,8 @@ router.use(authorise('DOCTOR'));
  *   description: Doctor-facing endpoints
  */
 
+router.get('/me/dashboard', doctorController.getDashboard);
+
 /**
  * @swagger
  * /api/doctors/me:

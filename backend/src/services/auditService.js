@@ -59,4 +59,37 @@ const getAuditLogs = async ({ page = 1, limit = 20, actionType, entityType, acto
   };
 };
 
-module.exports = { logAction, getAuditLogs };
+/**
+ * Get admin dashboard stats.
+ */
+const getDashboardStats = async () => {
+  const User = require('../models/User');
+  const Patient = require('../models/Patient');
+  const Doctor = require('../models/Doctor');
+  const Treatment = require('../models/Treatment');
+
+  const [totalUsers, totalPatients, totalDoctors, totalTreatments, totalAuditLogs, recentActivity] = await Promise.all([
+    User.countDocuments({ isActive: true }),
+    Patient.countDocuments(),
+    Doctor.countDocuments(),
+    Treatment.countDocuments(),
+    AuditLog.countDocuments(),
+    AuditLog.find()
+      .sort({ occurredAt: -1 })
+      .limit(10)
+      .populate('actorUserId', 'email role'),
+  ]);
+
+  return {
+    stats: {
+      totalUsers,
+      totalPatients,
+      totalDoctors,
+      totalTreatments,
+      totalAuditLogs,
+    },
+    recentActivity,
+  };
+};
+
+module.exports = { logAction, getAuditLogs, getDashboardStats };

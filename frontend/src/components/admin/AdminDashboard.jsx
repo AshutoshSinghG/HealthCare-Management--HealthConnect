@@ -1,37 +1,12 @@
 import { motion } from 'framer-motion';
-import { Users, Stethoscope, Activity, Server, ShieldCheck, Clock, TrendingUp, BarChart3, Heart, AlertTriangle, FileText, Download, Lock } from 'lucide-react';
+import { Users, Stethoscope, Activity, Server, ShieldCheck, Clock, TrendingUp, BarChart3, Heart, AlertTriangle, FileText, Download, Lock, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-
-const systemStats = [
-  { label: 'Total Users', value: '1,247', icon: Users, color: 'from-primary-500 to-primary-600', trend: '+12%' },
-  { label: 'Active Patients', value: '1,102', icon: Heart, color: 'from-danger-400 to-danger-500', trend: '+25' },
-  { label: 'Active Doctors', value: '38', icon: Stethoscope, color: 'from-success-500 to-success-600', trend: '+3' },
-  { label: 'Total Treatments', value: '3,842', icon: Activity, color: 'from-warning-500 to-warning-600', trend: '+18%' },
-  { label: 'System Uptime', value: '99.9%', icon: Server, color: 'from-violet-500 to-violet-600', trend: '' },
-  { label: 'Security Alerts', value: '3', icon: Lock, color: 'from-danger-500 to-danger-600', trend: '-1' },
-];
-
-const activityData = [
-  { hour: '00:00', logins: 5, actions: 12 },
-  { hour: '04:00', logins: 2, actions: 8 },
-  { hour: '08:00', logins: 45, actions: 120 },
-  { hour: '12:00', logins: 38, actions: 95 },
-  { hour: '16:00', logins: 52, actions: 140 },
-  { hour: '20:00', logins: 20, actions: 45 },
-];
-
-const recentActivity = [
-  { user: 'Dr. Michael Chen', action: 'Created treatment record', time: '2 min ago', role: 'doctor' },
-  { user: 'Sarah Johnson', action: 'Viewed treatment history', time: '5 min ago', role: 'patient' },
-  { user: 'Admin User', action: 'Exported audit logs', time: '15 min ago', role: 'admin' },
-  { user: 'Dr. Priya Sharma', action: 'Flagged medication', time: '22 min ago', role: 'doctor' },
-  { user: 'Robert Williams', action: 'Downloaded medical records', time: '30 min ago', role: 'patient' },
-  { user: 'Dr. Sarah Wilson', action: 'Updated patient profile', time: '45 min ago', role: 'doctor' },
-];
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { getAdminDashboard } from '../../api/adminApi';
 
 const quickActions = [
   { label: 'User Management', desc: 'Create, disable, manage users', icon: Users, to: '/admin/users', color: 'bg-primary-50 text-primary-600 group-hover:bg-primary-100' },
@@ -42,9 +17,49 @@ const quickActions = [
   { label: 'Security Monitor', desc: 'Login attempts & alerts', icon: ShieldCheck, to: '/admin/security', color: 'bg-violet-50 text-violet-600 group-hover:bg-violet-100' },
 ];
 
-const roleColors = { doctor: 'info', patient: 'success', admin: 'warning' };
+const roleColors = { DOCTOR: 'info', PATIENT: 'success', ADMIN: 'warning' };
 
 const AdminDashboard = () => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: getAdminDashboard,
+    retry: 1,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-warning-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-surface-800">Unable to load dashboard</h3>
+          <p className="text-surface-500 text-sm mt-1">Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { stats, recentActivity } = data;
+
+  const systemStats = [
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'from-primary-500 to-primary-600' },
+    { label: 'Active Patients', value: stats.totalPatients, icon: Heart, color: 'from-danger-400 to-danger-500' },
+    { label: 'Active Doctors', value: stats.totalDoctors, icon: Stethoscope, color: 'from-success-500 to-success-600' },
+    { label: 'Total Treatments', value: stats.totalTreatments, icon: Activity, color: 'from-warning-500 to-warning-600' },
+    { label: 'Audit Logs', value: stats.totalAuditLogs, icon: FileText, color: 'from-violet-500 to-violet-600' },
+    { label: 'System Status', value: 'Live', icon: Server, color: 'from-success-500 to-success-600' },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -65,12 +80,6 @@ const AdminDashboard = () => {
               <div>
                 <p className="text-xs text-surface-500 font-medium">{stat.label}</p>
                 <p className="text-2xl font-bold text-surface-900 mt-1">{stat.value}</p>
-                {stat.trend && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingUp className="w-3 h-3 text-success-500" />
-                    <span className="text-xs font-medium text-success-500">{stat.trend}</span>
-                  </div>
-                )}
               </div>
               <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
                 <stat.icon className="w-4 h-4 text-white" />
@@ -99,54 +108,43 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Charts + Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-surface-200/60 shadow-card p-6">
-          <h3 className="section-title mb-6 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary-500" />
-            System Activity
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 12 }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0' }} />
-                <Bar dataKey="logins" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={16} name="Logins" />
-                <Bar dataKey="actions" fill="#10B981" radius={[4, 4, 0, 0]} barSize={16} name="Actions" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <Card>
-          <h3 className="section-title mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary-500" />
-            Recent Activity
-          </h3>
-          <div className="space-y-2">
-            {recentActivity.map((a, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+      {/* Recent Activity */}
+      <Card>
+        <h3 className="section-title mb-4 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary-500" />
+          Recent Activity
+        </h3>
+        <div className="space-y-2">
+          {(recentActivity || []).length === 0 ? (
+            <p className="text-sm text-surface-400 py-4 text-center">No recent activity</p>
+          ) : (
+            recentActivity.map((a, i) => (
+              <motion.div key={a._id || i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-surface-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-surface-500">{a.user.charAt(0)}</span>
+                  <span className="text-xs font-bold text-surface-500">
+                    {a.actorUserId?.email?.charAt(0)?.toUpperCase() || '?'}
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-surface-800">
-                    <span className="font-medium">{a.user}</span>{' '}
-                    <span className="text-surface-500">{a.action}</span>
+                    <span className="font-medium">{a.actorUserId?.email || 'Unknown'}</span>{' '}
+                    <span className="text-surface-500">{a.actionType} — {a.entityType}</span>
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-surface-400">{a.time}</span>
-                    <Badge variant={roleColors[a.role]} size="sm">{a.role}</Badge>
+                    <span className="text-xs text-surface-400">
+                      {a.occurredAt ? new Date(a.occurredAt).toLocaleString() : ''}
+                    </span>
+                    <Badge variant={roleColors[a.actorUserId?.role] || roleColors[a.actorRole] || 'default'} size="sm">
+                      {a.actorUserId?.role || a.actorRole || 'N/A'}
+                    </Badge>
                   </div>
                 </div>
               </motion.div>
-            ))}
-          </div>
-        </Card>
-      </div>
+            ))
+          )}
+        </div>
+      </Card>
     </div>
   );
 };

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, Eye, EyeOff, User, Phone } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import Input from '../ui/Input';
@@ -14,21 +14,57 @@ const signupSchema = z.object({
   phone: z.string().min(10, 'Please enter a valid phone number').optional().or(z.literal('')),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
-  role: z.enum(['patient', 'doctor'], { required_error: 'Please select a role' }),
+  role: z.enum(['PATIENT', 'DOCTOR'], { required_error: 'Please select a role' }),
   agreeTerms: z.literal(true, { errorMap: () => ({ message: 'You must agree to the terms' }) }),
+  // Patient-specific
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
+  // Doctor-specific
+  specialisation: z.string().optional(),
+  registrationNumber: z.string().optional(),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
+}).refine(data => {
+  if (data.role === 'PATIENT') return !!data.dateOfBirth;
+  return true;
+}, {
+  message: 'Date of birth is required',
+  path: ['dateOfBirth'],
+}).refine(data => {
+  if (data.role === 'PATIENT') return !!data.gender;
+  return true;
+}, {
+  message: 'Gender is required',
+  path: ['gender'],
+}).refine(data => {
+  if (data.role === 'DOCTOR') return !!data.specialisation;
+  return true;
+}, {
+  message: 'Specialisation is required',
+  path: ['specialisation'],
+}).refine(data => {
+  if (data.role === 'DOCTOR') return !!data.registrationNumber;
+  return true;
+}, {
+  message: 'Registration number is required',
+  path: ['registrationNumber'],
 });
 
 const SignupForm = ({ onSubmit, loading }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, formState: { errors } } = useForm({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: '', email: '', phone: '', password: '', confirmPassword: '', role: 'patient', agreeTerms: false },
+    defaultValues: {
+      fullName: '', email: '', phone: '', password: '', confirmPassword: '',
+      role: 'PATIENT', agreeTerms: false,
+      dateOfBirth: '', gender: '', specialisation: '', registrationNumber: '',
+    },
   });
+
+  const selectedRole = useWatch({ control, name: 'role' });
 
   return (
     <motion.form
@@ -69,14 +105,14 @@ const SignupForm = ({ onSubmit, loading }) => {
         <label className="block text-sm font-medium text-surface-700">I am a</label>
         <div className="grid grid-cols-2 gap-3">
           <label className="relative">
-            <input type="radio" value="patient" {...register('role')} className="peer sr-only" />
+            <input type="radio" value="PATIENT" {...register('role')} className="peer sr-only" />
             <div className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-surface-200 rounded-xl text-sm font-medium text-surface-600 cursor-pointer transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-600 hover:border-surface-300">
               <User className="w-4 h-4" />
               Patient
             </div>
           </label>
           <label className="relative">
-            <input type="radio" value="doctor" {...register('role')} className="peer sr-only" />
+            <input type="radio" value="DOCTOR" {...register('role')} className="peer sr-only" />
             <div className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-surface-200 rounded-xl text-sm font-medium text-surface-600 cursor-pointer transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-600 hover:border-surface-300">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
               Doctor
@@ -85,6 +121,63 @@ const SignupForm = ({ onSubmit, loading }) => {
         </div>
         {errors.role && <p className="text-xs text-danger-500">{errors.role.message}</p>}
       </div>
+
+      {/* Patient-specific fields */}
+      {selectedRole === 'PATIENT' && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="space-y-4"
+        >
+          <Input
+            label="Date of Birth"
+            type="date"
+            icon={Calendar}
+            error={errors.dateOfBirth?.message}
+            {...register('dateOfBirth')}
+          />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-surface-700">Gender</label>
+            <div className="grid grid-cols-3 gap-2">
+              {['Male', 'Female', 'Other'].map((g) => (
+                <label key={g} className="relative">
+                  <input type="radio" value={g} {...register('gender')} className="peer sr-only" />
+                  <div className="flex items-center justify-center px-3 py-2 border-2 border-surface-200 rounded-xl text-sm font-medium text-surface-600 cursor-pointer transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-600 hover:border-surface-300">
+                    {g}
+                  </div>
+                </label>
+              ))}
+            </div>
+            {errors.gender && <p className="text-xs text-danger-500">{errors.gender.message}</p>}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Doctor-specific fields */}
+      {selectedRole === 'DOCTOR' && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="space-y-4"
+        >
+          <Input
+            label="Specialisation"
+            type="text"
+            placeholder="e.g. General Medicine, Cardiology"
+            error={errors.specialisation?.message}
+            {...register('specialisation')}
+          />
+          <Input
+            label="Registration Number"
+            type="text"
+            placeholder="Medical license/registration number"
+            error={errors.registrationNumber?.message}
+            {...register('registrationNumber')}
+          />
+        </motion.div>
+      )}
 
       <div className="relative">
         <Input

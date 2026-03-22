@@ -127,7 +127,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                 className="overflow-hidden min-w-0"
               >
                 <p className="text-sm font-medium text-surface-800 truncate">{user?.name}</p>
-                <p className="text-xs text-surface-500 capitalize">{user?.role}</p>
+                <p className="text-xs text-surface-500">{user?.role?.toLowerCase()}</p>
               </motion.div>
             )}
           </AnimatePresence>

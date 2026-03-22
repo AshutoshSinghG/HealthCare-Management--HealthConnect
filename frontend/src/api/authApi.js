@@ -2,12 +2,17 @@ import api from './axios';
 
 export const login = async (credentials) => {
   const { data } = await api.post('/auth/login', credentials);
-  return data;
+  return data.data;
+};
+
+export const register = async (payload) => {
+  const { data } = await api.post('/auth/register', payload);
+  return data.data;
 };
 
 export const verifyMfa = async (payload) => {
-  const { data } = await api.post('/auth/verify-mfa', payload);
-  return data;
+  const { data } = await api.post('/auth/mfa/verify', payload);
+  return data.data;
 };
 
 export const forgotPassword = async (email) => {
@@ -20,9 +25,9 @@ export const resetPassword = async (payload) => {
   return data;
 };
 
-export const getProfile = async () => {
-  const { data } = await api.get('/auth/profile');
-  return data;
+export const refreshToken = async (refreshTokenStr) => {
+  const { data } = await api.post('/auth/refresh', { refreshToken: refreshTokenStr });
+  return data.data;
 };
 
 export const logout = async () => {

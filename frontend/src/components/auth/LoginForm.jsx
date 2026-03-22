@@ -71,24 +71,6 @@ const LoginForm = ({ onSubmit, loading }) => {
         Sign In
       </Button>
 
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-surface-200" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="px-3 bg-white text-xs text-surface-500">Demo Credentials</span>
-        </div>
-      </div>
-
-      <div className="bg-surface-50 rounded-xl p-3 space-y-1.5">
-        <p className="text-xs font-medium text-surface-600">Try these accounts:</p>
-        <div className="space-y-1 text-xs text-surface-500">
-          <p><span className="font-mono bg-surface-100 px-1.5 py-0.5 rounded">patient@health.com</span> — Patient Portal</p>
-          <p><span className="font-mono bg-surface-100 px-1.5 py-0.5 rounded">doctor@health.com</span> — Doctor Portal</p>
-          <p><span className="font-mono bg-surface-100 px-1.5 py-0.5 rounded">admin@health.com</span> — Admin Portal</p>
-          <p className="text-surface-400 mt-1">Any password works</p>
-        </div>
-      </div>
 
       <p className="text-center text-sm text-surface-500 mt-4">
         Don't have an account?{' '}
@@ -96,6 +78,7 @@ const LoginForm = ({ onSubmit, loading }) => {
           Sign Up
         </a>
       </p>
+
     </motion.form>
   );
 };

@@ -1,4 +1,4 @@
-const { getAuditLogs } = require('../services/auditService');
+const { getAuditLogs, getDashboardStats } = require('../services/auditService');
 const { success } = require('../utils/apiResponse');
 
 /**
@@ -13,4 +13,16 @@ const listAuditLogs = async (req, res, next) => {
   }
 };
 
-module.exports = { listAuditLogs };
+/**
+ * GET /admin/dashboard
+ */
+const getDashboard = async (req, res, next) => {
+  try {
+    const result = await getDashboardStats();
+    return success(res, 'Admin dashboard retrieved', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listAuditLogs, getDashboard };
