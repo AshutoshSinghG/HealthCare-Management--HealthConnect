@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { useDoctorSlots, useCreateDoctorSlot, useDeleteDoctorSlot, useUpdateSlotStatus, useDoctorAvailability, useUpdateDoctorAvailability } from '../../hooks/useDoctors';
 
 // ── helpers ──
 const pad = n => String(n).padStart(2, '0');
@@ -74,15 +75,37 @@ const statusIcons = { booked: CheckCircle, pending: Timer, rejected: XCircle };
 
 // ────────────────────────────────── component ──────────────────────────────────
 const SlotManagement = () => {
-  const [bookings, setBookings] = useState(initialBookings);
-  const [availability, setAvailability] = useState(initialAvailability);
+  const createSlotMutation = useCreateDoctorSlot();
+  const deleteSlotMutation = useDeleteDoctorSlot();
+  const updateStatusMutation = useUpdateSlotStatus();
+  const updateAvailMutation = useUpdateDoctorAvailability();
+
+  const { data: availData } = useDoctorAvailability();
+  const availability = availData || { startTime: '09:00', endTime: '17:00', consultationFee: 150, workingDays: [1,2,3,4,5] };
+
   const [viewMode, setViewMode] = useState('Daily');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('overview');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addSlotOpen, setAddSlotOpen] = useState(false);
   const [newSlot, setNewSlot] = useState({ date: todayStr, from: '09:00', to: '09:30', patient: '', patientId: '', reason: '' });
-  const [tempAvail, setTempAvail] = useState(initialAvailability);
+  const [tempAvail, setTempAvail] = useState(availability);
+
+  // Load slots from API
+  const { data: slotsData } = useDoctorSlots();
+  const bookings = useMemo(() => {
+    if (!slotsData) return [];
+    return (Array.isArray(slotsData) ? slotsData : []).map(s => ({
+      id: s._id,
+      date: s.date,
+      from: s.from,
+      to: s.to,
+      patient: s.patient || '',
+      patientId: s.patientId || '',
+      reason: s.reason || '',
+      status: s.status || 'vacant',
+    }));
+  }, [slotsData]);
 
   // ── derived ──
   const allSlots = useMemo(() => generateSlots(availability.startTime, availability.endTime), [availability]);
@@ -138,22 +161,25 @@ const SlotManagement = () => {
     setCurrentDate(d);
   };
 
-  const accept = id => { setBookings(p => p.map(b => b.id === id ? { ...b, status: 'booked' } : b)); toast.success('Appointment accepted'); };
-  const reject = id => { setBookings(p => p.map(b => b.id === id ? { ...b, status: 'rejected' } : b)); toast.success('Appointment rejected'); };
-  const deleteSlot = id => { setBookings(p => p.filter(b => b.id !== id)); toast.success('Slot deleted'); };
+  const accept = id => { updateStatusMutation.mutate({ id, status: 'booked' }, { onSuccess: () => toast.success('Appointment accepted') }); };
+  const reject = id => { updateStatusMutation.mutate({ id, status: 'rejected' }, { onSuccess: () => toast.success('Appointment rejected') }); };
+  const deleteSlot = id => { deleteSlotMutation.mutate(id, { onSuccess: () => toast.success('Slot deleted') }); };
 
   const saveAvailability = () => {
-    setAvailability(tempAvail);
-    setSettingsOpen(false);
-    toast.success('Availability updated');
+    updateAvailMutation.mutate(tempAvail, {
+      onSuccess: () => { setSettingsOpen(false); toast.success('Availability updated'); },
+    });
   };
 
   const addNewSlot = () => {
     if (!newSlot.date) { toast.error('Date is required'); return; }
-    setBookings(prev => [...prev, { id: Date.now(), ...newSlot, status: newSlot.patient ? 'pending' : 'vacant' }]);
-    setNewSlot({ date: todayStr, from: '09:00', to: '09:30', patient: '', patientId: '', reason: '' });
-    setAddSlotOpen(false);
-    toast.success('Slot created');
+    createSlotMutation.mutate(newSlot, {
+      onSuccess: () => {
+        setNewSlot({ date: todayStr, from: '09:00', to: '09:30', patient: '', patientId: '', reason: '' });
+        setAddSlotOpen(false);
+        toast.success('Slot created');
+      },
+    });
   };
 
   const dateLabel = () => {

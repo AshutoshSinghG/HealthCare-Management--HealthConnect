@@ -230,10 +230,41 @@ const removeUnsuitableFlag = async ({
   return flag;
 };
 
+/**
+ * Get a single treatment by ID (with medications).
+ */
+const getTreatmentById = async ({ treatmentId, userId }) => {
+  const doctor = await Doctor.findOne({ userId });
+  if (!doctor) {
+    const err = new Error('Doctor profile not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const treatment = await Treatment.findById(treatmentId);
+  if (!treatment) {
+    const err = new Error('Treatment not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const medications = await Medication.find({ treatmentId: treatment._id });
+  return {
+    ...treatment.toObject(),
+    medications: medications.map(m => ({
+      name: m.medicineName || m.name || '',
+      dosage: m.dosage || '',
+      frequency: m.frequency || '',
+      duration: m.durationDays ? `${m.durationDays} days` : (m.duration || ''),
+      route: m.routeOfAdmin || m.route || '',
+      notes: m.notes || '',
+    })),
+  };
+};
+
 module.exports = {
   createTreatment,
   updateTreatment,
   softDeleteTreatment,
   flagUnsuitableMedicine,
   removeUnsuitableFlag,
+  getTreatmentById,
 };

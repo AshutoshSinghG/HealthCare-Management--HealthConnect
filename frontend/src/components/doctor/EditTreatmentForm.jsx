@@ -2,7 +2,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { Plus, Save, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Plus, Save, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -11,6 +11,8 @@ import Badge from '../../components/ui/Badge';
 import MedicationForm from './MedicationForm';
 import { TREATMENT_OUTCOMES } from '../../utils/constants';
 import toast from 'react-hot-toast';
+import { useTreatmentForEdit, useUpdateTreatment } from '../../hooks/useDoctors';
+import { useEffect } from 'react';
 
 const treatmentSchema = z.object({
   visitDate: z.string().min(1, 'Visit date is required'),
@@ -32,43 +34,51 @@ const treatmentSchema = z.object({
   })).optional(),
 });
 
-// Simulate loading existing treatment data for editing
-const mockExistingTreatment = {
-  visitDate: '2026-03-05',
-  chiefComplaint: 'Persistent cough and mild fever for 3 days',
-  diagnosis: 'Upper Respiratory Infection',
-  icdCode: 'J06.9',
-  treatmentPlan: 'Rest, hydration, and prescribed antibiotics. Monitor symptoms for 5 days.',
-  followUpDate: '2026-03-19',
-  instructions: 'Take medications as prescribed. Drink plenty of fluids. Rest for at least 3 days.',
-  outcome: 'improved',
-  notes: 'Patient responded well to initial treatment. Follow-up recommended.',
-  medications: [
-    { name: 'Amoxicillin', dosage: '500mg', frequency: 'Three Times Daily (TDS)', duration: '7 days', route: 'Oral', notes: 'Take after meals' },
-    { name: 'Paracetamol', dosage: '650mg', frequency: 'As Needed (PRN)', duration: '5 days', route: 'Oral', notes: 'For fever above 100°F' },
-  ],
-};
-
 const EditTreatmentForm = () => {
   const { treatmentId } = useParams();
   const navigate = useNavigate();
+  const { data: treatment, isLoading, isError } = useTreatmentForEdit(treatmentId);
+  const updateMutation = useUpdateTreatment();
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting, isDirty } } = useForm({
+  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting, isDirty } } = useForm({
     resolver: zodResolver(treatmentSchema),
-    defaultValues: mockExistingTreatment,
+    defaultValues: {
+      visitDate: '', chiefComplaint: '', diagnosis: '', icdCode: '',
+      treatmentPlan: '', followUpDate: '', instructions: '', outcome: '', notes: '', medications: [],
+    },
   });
+
+  useEffect(() => {
+    if (treatment) {
+      reset({
+        visitDate: treatment.visitDate ? new Date(treatment.visitDate).toISOString().split('T')[0] : '',
+        chiefComplaint: treatment.chiefComplaint || '',
+        diagnosis: treatment.diagnosis || '',
+        icdCode: treatment.icdCode || '',
+        treatmentPlan: treatment.treatmentPlan || '',
+        followUpDate: treatment.followUpDate ? new Date(treatment.followUpDate).toISOString().split('T')[0] : '',
+        instructions: treatment.instructions || '',
+        outcome: treatment.outcomeStatus || treatment.outcome || '',
+        notes: treatment.notes || '',
+        medications: treatment.medications || [],
+      });
+    }
+  }, [treatment, reset]);
 
   const { fields, append, remove } = useFieldArray({ control, name: 'medications' });
 
   const onSubmit = async (data) => {
     try {
-      console.log('Updated treatment:', data);
+      await updateMutation.mutateAsync({ id: treatmentId, data });
       toast.success('Treatment record updated successfully!');
       navigate(-1);
     } catch {
       toast.error('Failed to update treatment');
     }
   };
+
+  if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
+  if (isError) return <div className="text-center py-20 text-surface-500">Failed to load treatment data.</div>;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -160,7 +170,7 @@ const EditTreatmentForm = () => {
 
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={() => navigate(-1)}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting} icon={Save} size="lg" disabled={!isDirty}>
+          <Button type="submit" loading={isSubmitting || updateMutation.isPending} icon={Save} size="lg" disabled={!isDirty}>
             Update Treatment
           </Button>
         </div>

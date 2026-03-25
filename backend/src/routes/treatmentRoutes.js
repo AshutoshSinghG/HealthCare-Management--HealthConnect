@@ -34,6 +34,7 @@ router.use(authorise('DOCTOR'));
  *       200:
  *         description: Treatment updated
  */
+router.get('/:treatmentId', treatmentController.getTreatmentById);
 router.put('/:treatmentId', validate(updateTreatmentSchema), treatmentController.updateTreatment);
 
 /**

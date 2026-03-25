@@ -89,10 +89,21 @@ const removeUnsuitableFlag = async (req, res, next) => {
   }
 };
 
+const getTreatmentById = async (req, res, next) => {
+  try {
+    const result = await treatmentService.getTreatmentById({
+      treatmentId: req.params.treatmentId,
+      userId: req.user.userId,
+    });
+    return success(res, 'Treatment retrieved', result);
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   createTreatment,
   updateTreatment,
   deleteTreatment,
   flagUnsuitableMedicine,
   removeUnsuitableFlag,
+  getTreatmentById,
 };

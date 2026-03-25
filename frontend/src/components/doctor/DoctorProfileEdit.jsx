@@ -1,45 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Stethoscope, Award, Building, GraduationCap, Save, ArrowLeft, Camera, Clock, Globe } from 'lucide-react';
+import { User, Mail, Phone, Stethoscope, Award, Building, GraduationCap, Save, ArrowLeft, Camera, Clock, Globe, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
-
-const initialProfile = {
-  name: 'Dr. Michael Chen',
-  email: 'dr.chen@healthconnect.com',
-  phone: '+1-555-2001',
-  dob: '1980-03-12',
-  gender: 'Male',
-  specialty: 'General Medicine',
-  department: 'Internal Medicine',
-  qualifications: 'MD, MBBS',
-  licenseNumber: 'MED-2015-78432',
-  yearsOfExperience: 11,
-  bio: 'Board-certified physician with over 10 years of experience in internal medicine. Special interest in preventive healthcare and chronic disease management.',
-  consultationHours: '09:00 AM - 05:00 PM',
-  languages: 'English, Mandarin',
-  address: '350 Fifth Avenue, Suite 4200, New York, NY 10118',
-};
+import { useDoctorProfile, useUpdateDoctorProfile } from '../../hooks/useDoctors';
 
 const specializations = ['General Medicine', 'Cardiology', 'Pediatrics', 'Endocrinology', 'Neurology', 'Orthopedics', 'Dermatology', 'Psychiatry', 'Ophthalmology', 'Radiology', 'Pulmonology', 'Nephrology'];
 
 const DoctorProfileEdit = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState(initialProfile);
-  const [saving, setSaving] = useState(false);
+  const { data: profile, isLoading, isError } = useDoctorProfile();
+  const updateMutation = useUpdateDoctorProfile();
+  const [form, setForm] = useState({
+    name: '', email: '', phone: '', dob: '', gender: 'Male', specialty: '',
+    department: '', qualifications: '', licenseNumber: '', yearsOfExperience: 0,
+    bio: '', consultationHours: '', languages: '', address: '',
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        name: `Dr. ${profile.firstName} ${profile.lastName}`,
+        email: profile.contactEmail || '',
+        phone: profile.contactPhone || '',
+        dob: profile.dateOfBirth || '',
+        gender: profile.gender || 'Male',
+        specialty: profile.specialisation || '',
+        department: profile.department || '',
+        qualifications: profile.qualifications || '',
+        licenseNumber: profile.registrationNumber || '',
+        yearsOfExperience: profile.yearsOfExperience || 0,
+        bio: profile.bio || '',
+        consultationHours: profile.consultationHours || '',
+        languages: profile.languages || '',
+        address: profile.address || '',
+      });
+    }
+  }, [profile]);
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSaving(false);
-    toast.success('Profile updated successfully!');
-    navigate('/doctor/dashboard');
+    const nameParts = form.name.replace(/^Dr\.\s*/i, '').trim().split(/\s+/);
+    try {
+      await updateMutation.mutateAsync({
+        firstName: nameParts[0] || '', lastName: nameParts.slice(1).join(' ') || '',
+        contactEmail: form.email, contactPhone: form.phone, dateOfBirth: form.dob,
+        gender: form.gender, specialisation: form.specialty, department: form.department,
+        qualifications: form.qualifications, registrationNumber: form.licenseNumber,
+        yearsOfExperience: Number(form.yearsOfExperience), bio: form.bio,
+        consultationHours: form.consultationHours, languages: form.languages, address: form.address,
+      });
+      toast.success('Profile updated successfully!');
+      navigate('/doctor/dashboard');
+    } catch { toast.error('Failed to update profile'); }
   };
+
+  if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
+  if (isError) return <div className="text-center py-20 text-surface-500">Failed to load profile.</div>;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -166,7 +187,7 @@ const DoctorProfileEdit = () => {
         <Link to="/doctor/dashboard">
           <Button variant="ghost">Cancel</Button>
         </Link>
-        <Button icon={Save} size="lg" loading={saving} onClick={handleSave}>
+        <Button icon={Save} size="lg" loading={updateMutation.isPending} onClick={handleSave}>
           Save Changes
         </Button>
       </div>

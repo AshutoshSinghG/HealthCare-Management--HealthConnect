@@ -52,4 +52,16 @@ const getDashboard = async (req, res, next) => {
   }
 };
 
-module.exports = { getProfile, getPatients, getPatientDetail, getDashboard };
+/**
+ * PUT /doctors/me
+ */
+const updateProfile = async (req, res, next) => {
+  try {
+    const doctor = await doctorService.updateProfile(req.user.userId, req.body);
+    return success(res, 'Profile updated', doctor);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getProfile, updateProfile, getPatients, getPatientDetail, getDashboard };

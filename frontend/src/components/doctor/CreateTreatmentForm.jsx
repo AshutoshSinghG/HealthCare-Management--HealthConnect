@@ -10,8 +10,11 @@ import Card from '../../components/ui/Card';
 import MedicationForm from './MedicationForm';
 import { TREATMENT_OUTCOMES } from '../../utils/constants';
 import toast from 'react-hot-toast';
+import { useCreateTreatment, useDoctorPatients } from '../../hooks/useDoctors';
+import { useState, useMemo } from 'react';
 
 const treatmentSchema = z.object({
+  patientId: z.string().min(1, 'Patient is required'),
   visitDate: z.string().min(1, 'Visit date is required'),
   chiefComplaint: z.string().min(1, 'Chief complaint is required'),
   diagnosis: z.string().min(1, 'Diagnosis is required'),
@@ -33,9 +36,18 @@ const treatmentSchema = z.object({
 
 const CreateTreatmentForm = () => {
   const navigate = useNavigate();
+  const createMutation = useCreateTreatment();
+  const { data: patientsData } = useDoctorPatients();
+  const patients = useMemo(() => {
+    if (!patientsData) return [];
+    const list = patientsData.patients || patientsData;
+    return Array.isArray(list) ? list : [];
+  }, [patientsData]);
+
   const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(treatmentSchema),
     defaultValues: {
+      patientId: '',
       visitDate: new Date().toISOString().split('T')[0],
       medications: [{ name: '', dosage: '', frequency: '', duration: '', route: '', notes: '' }],
     },
@@ -45,8 +57,8 @@ const CreateTreatmentForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      // In production: await createTreatment(data)
-      console.log('Treatment data:', data);
+      const { patientId, ...treatmentData } = data;
+      await createMutation.mutateAsync({ patientId, ...treatmentData });
       toast.success('Treatment created successfully!');
       navigate('/doctor/patients');
     } catch {
@@ -71,6 +83,16 @@ const CreateTreatmentForm = () => {
         <Card>
           <h3 className="section-title mb-4">Visit Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="block text-sm font-medium text-surface-700">Select Patient</label>
+              <select {...register('patientId')} className="input-base">
+                <option value="">Select patient...</option>
+                {patients.map(p => (
+                  <option key={p._id} value={p._id}>{p.firstName} {p.lastName}</option>
+                ))}
+              </select>
+              {errors.patientId && <p className="text-xs text-danger-500">{errors.patientId.message}</p>}
+            </div>
             <Input label="Visit Date" type="date" error={errors.visitDate?.message} {...register('visitDate')} />
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-surface-700">Outcome Status</label>
@@ -150,7 +172,7 @@ const CreateTreatmentForm = () => {
           <Link to="/doctor/patients">
             <Button variant="ghost">Cancel</Button>
           </Link>
-          <Button type="submit" loading={isSubmitting} icon={Save} size="lg">
+          <Button type="submit" loading={isSubmitting || createMutation.isPending} icon={Save} size="lg">
             Save Treatment
           </Button>
         </div>

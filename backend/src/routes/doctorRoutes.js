@@ -33,6 +33,7 @@ router.get('/me/dashboard', doctorController.getDashboard);
  *         description: Doctor profile
  */
 router.get('/me', doctorController.getProfile);
+router.put('/me', doctorController.updateProfile);
 
 /**
  * @swagger

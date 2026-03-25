@@ -44,6 +44,45 @@ const doctorSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    qualifications: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    yearsOfExperience: {
+      type: Number,
+      default: 0,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    consultationHours: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    languages: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    address: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    dateOfBirth: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other', ''],
+      default: '',
+    },
   },
   {
     timestamps: true,

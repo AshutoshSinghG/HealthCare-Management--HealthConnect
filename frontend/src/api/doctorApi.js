@@ -10,6 +10,11 @@ export const getDoctorProfile = async () => {
   return data.data;
 };
 
+export const updateDoctorProfile = async (payload) => {
+  const { data } = await api.put('/doctors/me', payload);
+  return data.data;
+};
+
 export const getPatients = async (params) => {
   const { data } = await api.get('/doctors/me/patients', { params });
   return data.data;
@@ -25,6 +30,11 @@ export const createTreatment = async ({ patientId, ...treatmentData }) => {
   return data.data;
 };
 
+export const getTreatmentById = async (id) => {
+  const { data } = await api.get(`/treatments/${id}`);
+  return data.data;
+};
+
 export const updateTreatment = async (id, payload) => {
   const { data } = await api.put(`/treatments/${id}`, payload);
   return data.data;
@@ -37,5 +47,37 @@ export const flagUnsuitableMedicine = async ({ patientId, ...medicineData }) => 
 
 export const removeUnsuitableFlag = async (id) => {
   const { data } = await api.delete(`/doctors/unsuitable-medicines/${id}`);
+  return data.data;
+};
+
+// ─── Doctor Slot Management ───
+
+export const getDoctorSlots = async (params) => {
+  const { data } = await api.get('/doctor-slots/me/slots', { params });
+  return data.data;
+};
+
+export const createDoctorSlot = async (payload) => {
+  const { data } = await api.post('/doctor-slots/me/slots', payload);
+  return data.data;
+};
+
+export const deleteDoctorSlot = async (id) => {
+  const { data } = await api.delete(`/doctor-slots/me/slots/${id}`);
+  return data.data;
+};
+
+export const updateSlotStatus = async (id, status) => {
+  const { data } = await api.patch(`/doctor-slots/me/slots/${id}/status`, { status });
+  return data.data;
+};
+
+export const getDoctorAvailability = async () => {
+  const { data } = await api.get('/doctor-slots/me/availability');
+  return data.data;
+};
+
+export const updateDoctorAvailability = async (payload) => {
+  const { data } = await api.put('/doctor-slots/me/availability', payload);
   return data.data;
 };

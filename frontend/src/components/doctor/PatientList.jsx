@@ -1,26 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
-import { Search, ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Eye, Filter, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Eye, Filter, X, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatDate';
-
-const mockPatients = [
-  { id: 'P-1001', name: 'Sarah Johnson', email: 'sarah.j@email.com', bloodGroup: 'O+', dob: '1990-05-15', phone: '+1-555-0101', status: 'active', lastVisit: '2026-03-05', conditions: ['Hypertension'], diagnosis: 'Upper Respiratory Infection' },
-  { id: 'P-1002', name: 'Robert Williams', email: 'robert.w@email.com', bloodGroup: 'A+', dob: '1985-08-22', phone: '+1-555-0102', status: 'follow-up', lastVisit: '2026-03-04', conditions: ['Diabetes'], diagnosis: 'Hypertension' },
-  { id: 'P-1003', name: 'Emily Davis', email: 'emily.d@email.com', bloodGroup: 'B+', dob: '1978-12-10', phone: '+1-555-0103', status: 'active', lastVisit: '2026-03-03', conditions: ['Asthma', 'Allergies'], diagnosis: 'Type 2 Diabetes' },
-  { id: 'P-1004', name: 'James Brown', email: 'james.b@email.com', bloodGroup: 'AB-', dob: '1992-03-30', phone: '+1-555-0104', status: 'stable', lastVisit: '2026-03-02', conditions: ['Back Pain'], diagnosis: 'Chronic Back Pain' },
-  { id: 'P-1005', name: 'Lisa Anderson', email: 'lisa.a@email.com', bloodGroup: 'O-', dob: '1988-07-18', phone: '+1-555-0105', status: 'recovered', lastVisit: '2026-03-01', conditions: [], diagnosis: 'Migraine' },
-  { id: 'P-1006', name: 'David Wilson', email: 'david.w@email.com', bloodGroup: 'A-', dob: '1975-11-25', phone: '+1-555-0106', status: 'active', lastVisit: '2026-02-28', conditions: ['COPD'], diagnosis: 'COPD Management' },
-  { id: 'P-1007', name: 'Maria Garcia', email: 'maria.g@email.com', bloodGroup: 'B-', dob: '1995-01-08', phone: '+1-555-0107', status: 'follow-up', lastVisit: '2026-02-27', conditions: ['Thyroid'], diagnosis: 'Thyroid Disorder' },
-  { id: 'P-1008', name: 'John Martinez', email: 'john.m@email.com', bloodGroup: 'AB+', dob: '1982-09-14', phone: '+1-555-0108', status: 'active', lastVisit: '2026-02-25', conditions: ['Arthritis'], diagnosis: 'Arthritis' },
-];
-
-const statusColors = { active: 'info', 'follow-up': 'warning', stable: 'success', recovered: 'success' };
-const uniqueStatuses = ['active', 'follow-up', 'stable', 'recovered'];
-const uniqueDiagnoses = [...new Set(mockPatients.map(p => p.diagnosis))];
+import { useDoctorPatients } from '../../hooks/useDoctors';
+const statusColors = { active: 'info', 'follow-up': 'warning', stable: 'success', recovered: 'success', ONGOING: 'info', FOLLOW_UP: 'warning', RESOLVED: 'success', REFERRED: 'warning' };
 
 const PatientList = () => {
   const [sorting, setSorting] = useState([]);
@@ -31,17 +18,39 @@ const PatientList = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  const { data: patientsData, isLoading, isError } = useDoctorPatients();
+
+  const patients = useMemo(() => {
+    if (!patientsData) return [];
+    const list = patientsData.patients || patientsData;
+    return (Array.isArray(list) ? list : []).map(p => ({
+      id: p._id,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.contactEmail || '',
+      bloodGroup: p.bloodGroup || '',
+      dob: p.dateOfBirth || '',
+      phone: p.contactPhone || '',
+      status: p.lastTreatment?.outcomeStatus?.toLowerCase() || 'active',
+      lastVisit: p.lastTreatment?.visitDate || '',
+      conditions: p.chronicConditions || [],
+      diagnosis: p.lastTreatment?.diagnosis || '',
+    }));
+  }, [patientsData]);
+
+  const uniqueStatuses = useMemo(() => [...new Set(patients.map(p => p.status))], [patients]);
+  const uniqueDiagnoses = useMemo(() => [...new Set(patients.map(p => p.diagnosis).filter(Boolean))], [patients]);
+
   const activeFilterCount = [statusFilter, diagnosisFilter, dateFrom, dateTo].filter(Boolean).length;
 
   const filteredData = useMemo(() => {
-    return mockPatients.filter(p => {
+    return patients.filter(p => {
       if (statusFilter && p.status !== statusFilter) return false;
       if (diagnosisFilter && p.diagnosis !== diagnosisFilter) return false;
       if (dateFrom && p.lastVisit < dateFrom) return false;
       if (dateTo && p.lastVisit > dateTo) return false;
       return true;
     });
-  }, [statusFilter, diagnosisFilter, dateFrom, dateTo]);
+  }, [patients, statusFilter, diagnosisFilter, dateFrom, dateTo]);
 
   const clearFilters = () => { setStatusFilter(''); setDiagnosisFilter(''); setDateFrom(''); setDateTo(''); };
 
@@ -49,7 +58,7 @@ const PatientList = () => {
     {
       accessorKey: 'id',
       header: 'Patient ID',
-      cell: info => <span className="font-mono text-xs text-surface-500">{info.getValue()}</span>,
+      cell: info => <span className="font-mono text-xs text-surface-500">{String(info.getValue()).slice(-8)}</span>,
     },
     {
       accessorKey: 'name',
@@ -69,14 +78,14 @@ const PatientList = () => {
     {
       accessorKey: 'lastVisit',
       header: 'Last Visit',
-      cell: info => <span className="text-sm">{formatDate(info.getValue())}</span>,
+      cell: info => <span className="text-sm">{info.getValue() ? formatDate(info.getValue()) : 'N/A'}</span>,
     },
     {
       accessorKey: 'diagnosis',
       header: 'Diagnosis',
-      cell: info => <span className="text-sm text-surface-700">{info.getValue()}</span>,
+      cell: info => <span className="text-sm text-surface-700">{info.getValue() || 'N/A'}</span>,
     },
-    { accessorKey: 'status', header: 'Status', cell: info => <Badge variant={statusColors[info.getValue()]} size="sm" dot>{info.getValue()}</Badge> },
+    { accessorKey: 'status', header: 'Status', cell: info => <Badge variant={statusColors[info.getValue()] || 'default'} size="sm" dot>{info.getValue()}</Badge> },
     {
       id: 'actions',
       header: '',
@@ -100,6 +109,9 @@ const PatientList = () => {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 6 } },
   });
+
+  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
+  if (isError) return <div className="text-center py-20 text-surface-500">Failed to load patients.</div>;
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-surface-200/60 shadow-card overflow-hidden">

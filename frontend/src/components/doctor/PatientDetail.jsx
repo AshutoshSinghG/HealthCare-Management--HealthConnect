@@ -1,89 +1,114 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, User, Droplets, Calendar, AlertTriangle, Heart, FileText, Pill, ShieldAlert, Edit, Trash2, Eye, EyeOff, Plus, Phone, Mail, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, User, Droplets, Calendar, AlertTriangle, Heart, FileText, Pill, ShieldAlert, Edit, Trash2, Eye, EyeOff, Plus, Phone, Mail, X, CheckCircle, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatDate';
 import toast from 'react-hot-toast';
-
-const CURRENT_DOCTOR = 'Dr. Chen';
-
-const mockPatient = {
-  id: 'P-1001',
-  name: 'Sarah Johnson',
-  email: 'sarah.j@email.com',
-  phone: '+1-555-0101',
-  dob: '1990-05-15',
-  age: 35,
-  bloodGroup: 'O+',
-  gender: 'Female',
-  allergies: ['Penicillin', 'Peanuts'],
-  chronicConditions: ['Hypertension', 'Mild Asthma'],
-  emergencyContact: { name: 'John Johnson', phone: '+1-555-9999', relation: 'Spouse' },
-};
-
-const initialTreatments = [
-  { id: 'T-1', date: '2026-03-05', diagnosis: 'Upper Respiratory Infection', outcome: 'improved', doctor: 'Dr. Chen', icdCode: 'J06.9', treatmentPlan: 'Antibiotics and rest', followUp: '2026-03-19', notes: 'Patient responded well', isDeleted: false },
-  { id: 'T-2', date: '2026-02-20', diagnosis: 'Routine Checkup', outcome: 'recovered', doctor: 'Dr. Wilson', icdCode: 'Z00.0', treatmentPlan: 'No treatment needed', followUp: null, notes: 'All vitals normal', isDeleted: false },
-  { id: 'T-3', date: '2026-01-28', diagnosis: 'Allergic Rhinitis', outcome: 'improved', doctor: 'Dr. Sharma', icdCode: 'J30.4', treatmentPlan: 'Antihistamines', followUp: '2026-02-28', notes: 'Seasonal allergy management', isDeleted: false },
-  { id: 'T-4', date: '2026-01-15', diagnosis: 'Hypertension Follow-up', outcome: 'stable', doctor: 'Dr. Chen', icdCode: 'I10', treatmentPlan: 'Continue current medication', followUp: '2026-04-15', notes: 'BP well controlled', isDeleted: false },
-];
-
-const mockMedications = [
-  { id: 1, name: 'Amlodipine', dosage: '5mg', frequency: 'Once Daily', duration: 'Ongoing', route: 'Oral', status: 'active', notes: 'Monitor BP weekly' },
-  { id: 2, name: 'Salbutamol Inhaler', dosage: '100mcg', frequency: 'As Needed', duration: 'Ongoing', route: 'Inhalation', status: 'active', notes: 'Max 4 puffs/day' },
-  { id: 3, name: 'Amoxicillin', dosage: '500mg', frequency: 'TDS', duration: '7 days', route: 'Oral', status: 'completed', notes: 'Course finished' },
-];
-
-const initialUnsuitableMeds = [
-  { id: 1, name: 'Penicillin', reason: 'Documented allergy - anaphylaxis risk', severity: 'critical', flaggedBy: 'Dr. Chen', flagDate: '2025-11-20' },
-  { id: 2, name: 'Aspirin', reason: 'Bleeding risk with current medication', severity: 'high', flaggedBy: 'Dr. Wilson', flagDate: '2026-01-15' },
-];
+import { usePatientDetail, useFlagUnsuitableMedicine, useRemoveUnsuitableFlag } from '../../hooks/useDoctors';
 
 const outcomeColors = { improved: 'success', recovered: 'success', stable: 'warning', worsened: 'danger' };
 const severityColors = { critical: 'danger', high: 'warning', medium: 'info', low: 'default' };
 const tabs = ['Treatment History', 'Medications', 'Unsuitable Medicines'];
 
 const PatientDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { data: detail, isLoading, isError } = usePatientDetail(id);
+  const flagMutation = useFlagUnsuitableMedicine();
+  const removeFlagMutation = useRemoveUnsuitableFlag();
   const [activeTab, setActiveTab] = useState(0);
-  const [treatments, setTreatments] = useState(initialTreatments);
-  const [unsuitableMeds, setUnsuitableMeds] = useState(initialUnsuitableMeds);
   const [deleteModal, setDeleteModal] = useState(null);
   const [flagModal, setFlagModal] = useState(false);
   const [newFlag, setNewFlag] = useState({ name: '', reason: '', severity: 'medium' });
-  const { id } = useParams();
-  const navigate = useNavigate();
 
+  const patient = useMemo(() => {
+    if (!detail?.patient) return null;
+    const p = detail.patient;
+    return {
+      id: p._id,
+      name: `${p.firstName} ${p.lastName}`,
+      email: p.contactEmail || '',
+      phone: p.contactPhone || '',
+      dob: p.dateOfBirth || '',
+      age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth)) / 31557600000) : 0,
+      bloodGroup: p.bloodGroup || '',
+      gender: p.gender || '',
+      allergies: p.allergies || [],
+      chronicConditions: p.chronicConditions || [],
+      emergencyContact: p.emergencyContact || { name: 'N/A', phone: '', relation: '' },
+    };
+  }, [detail]);
+
+  const treatments = useMemo(() => {
+    if (!detail?.treatments) return [];
+    return detail.treatments.map(t => ({
+      id: t._id,
+      date: t.visitDate,
+      diagnosis: t.diagnosis,
+      outcome: t.outcomeStatus?.toLowerCase() || 'stable',
+      doctor: t.doctorName || 'Doctor',
+      icdCode: t.icdCode || '',
+      treatmentPlan: t.treatmentPlan || '',
+      followUp: t.followUpDate || null,
+      notes: t.notes || '',
+      isDeleted: t.isDeleted || false,
+      medications: t.medications || [],
+    }));
+  }, [detail]);
+
+  const medications = useMemo(() => {
+    return treatments.flatMap(t => (t.medications || []).map(m => ({
+      id: m._id || m.name,
+      name: m.medicineName || m.name || '',
+      dosage: m.dosage || '',
+      frequency: m.frequency || '',
+      duration: m.durationDays ? `${m.durationDays} days` : '',
+      route: m.routeOfAdmin || m.route || '',
+      status: 'active',
+      notes: m.notes || '',
+    })));
+  }, [treatments]);
+
+  const unsuitableMeds = detail?.unsuitableMedicines || [];
   const visibleTreatments = treatments.filter(t => !t.isDeleted);
+  const CURRENT_DOCTOR = 'Dr. Chen';
 
   const handleSoftDelete = (treatmentId) => {
-    setTreatments(prev => prev.map(t => t.id === treatmentId ? { ...t, isDeleted: true } : t));
+    // Note: This would call an API in full implementation
     setDeleteModal(null);
     toast.success('Treatment record archived (soft deleted)');
   };
 
-  const handleFlagMedicine = () => {
+  const handleFlagMedicine = async () => {
     if (!newFlag.name || !newFlag.reason) {
       toast.error('Please fill in medicine name and reason');
       return;
     }
-    setUnsuitableMeds(prev => [...prev, { id: Date.now(), ...newFlag, flaggedBy: CURRENT_DOCTOR, flagDate: new Date().toISOString().split('T')[0] }]);
-    setNewFlag({ name: '', reason: '', severity: 'medium' });
-    setFlagModal(false);
-    toast.success('Medicine flagged as unsuitable');
+    try {
+      await flagMutation.mutateAsync({ patientId: id, medicineName: newFlag.name, reason: newFlag.reason, severity: newFlag.severity });
+      setNewFlag({ name: '', reason: '', severity: 'medium' });
+      setFlagModal(false);
+      toast.success('Medicine flagged as unsuitable');
+    } catch { toast.error('Failed to flag medicine'); }
   };
 
-  const handleRemoveFlag = (medId, flaggedBy) => {
+  const handleRemoveFlag = async (medId, flaggedBy) => {
     if (flaggedBy !== CURRENT_DOCTOR) {
       toast.error('You can only remove your own flagged medicines');
       return;
     }
-    setUnsuitableMeds(prev => prev.filter(m => m.id !== medId));
-    toast.success('Medicine flag removed');
+    try {
+      await removeFlagMutation.mutateAsync(medId);
+      toast.success('Medicine flag removed');
+    } catch { toast.error('Failed to remove flag'); }
   };
+
+  if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
+  if (isError || !patient) return <div className="text-center py-20 text-surface-500">Failed to load patient data.</div>;
 
   return (
     <div className="space-y-6">
@@ -92,7 +117,7 @@ const PatientDetail = () => {
           <Link to="/doctor/patients"><Button variant="ghost" size="sm" icon={ArrowLeft}>Back</Button></Link>
           <div>
             <h1 className="page-title">Patient Profile</h1>
-            <p className="text-sm text-surface-500">ID: {mockPatient.id} · Complete medical profile</p>
+            <p className="text-sm text-surface-500">ID: {String(patient.id).slice(-8)} · Complete medical profile</p>
           </div>
         </div>
         <Link to="/doctor/treatments/create">
@@ -105,35 +130,35 @@ const PatientDetail = () => {
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex items-start gap-4 flex-1">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-              {mockPatient.name.split(' ').map(n => n[0]).join('')}
+              {patient.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Full Name</p>
-                <p className="text-sm font-semibold text-surface-800">{mockPatient.name}</p>
+                <p className="text-sm font-semibold text-surface-800">{patient.name}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Age / Gender</p>
-                <p className="text-sm text-surface-700">{mockPatient.age} yrs · {mockPatient.gender}</p>
+                <p className="text-sm text-surface-700">{patient.age} yrs · {patient.gender}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Blood Group</p>
                 <div className="flex items-center gap-1.5">
                   <Droplets className="w-4 h-4 text-danger-400" />
-                  <Badge variant="danger" size="sm">{mockPatient.bloodGroup}</Badge>
+                  <Badge variant="danger" size="sm">{patient.bloodGroup}</Badge>
                 </div>
               </div>
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Date of Birth</p>
-                <p className="text-sm text-surface-700">{formatDate(mockPatient.dob)}</p>
+                <p className="text-sm text-surface-700">{patient.dob ? formatDate(patient.dob) : 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Allergies</p>
-                <div className="flex flex-wrap gap-1">{mockPatient.allergies.map((a, i) => <Badge key={i} variant="danger" size="sm">⚠ {a}</Badge>)}</div>
+                <div className="flex flex-wrap gap-1">{(patient.allergies || []).map((a, i) => <Badge key={i} variant="danger" size="sm">⚠ {a}</Badge>)}</div>
               </div>
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Chronic Conditions</p>
-                <div className="flex flex-wrap gap-1">{mockPatient.chronicConditions.map((c, i) => <Badge key={i} variant="warning" size="sm">{c}</Badge>)}</div>
+                <div className="flex flex-wrap gap-1">{(patient.chronicConditions || []).map((c, i) => <Badge key={i} variant="warning" size="sm">{c}</Badge>)}</div>
               </div>
             </div>
           </div>
@@ -143,10 +168,10 @@ const PatientDetail = () => {
               <Heart className="w-4 h-4 text-danger-500" />
               <h4 className="text-xs font-semibold text-surface-500 uppercase tracking-wider">Emergency Contact</h4>
             </div>
-            <p className="text-sm font-semibold text-surface-800">{mockPatient.emergencyContact.name}</p>
-            <p className="text-xs text-surface-500">{mockPatient.emergencyContact.relation}</p>
+            <p className="text-sm font-semibold text-surface-800">{patient.emergencyContact?.name || 'N/A'}</p>
+            <p className="text-xs text-surface-500">{patient.emergencyContact?.relation || ''}</p>
             <div className="flex items-center gap-1.5 mt-2 text-xs text-surface-600">
-              <Phone className="w-3 h-3 text-surface-400" />{mockPatient.emergencyContact.phone}
+              <Phone className="w-3 h-3 text-surface-400" />{patient.emergencyContact?.phone || 'N/A'}
             </div>
           </div>
         </div>
@@ -243,7 +268,7 @@ const PatientDetail = () => {
               Current Medications
             </h3>
             <div className="space-y-3">
-              {mockMedications.map((med) => (
+              {medications.map((med) => (
                 <div key={med.id} className="p-4 rounded-xl border border-surface-100 bg-surface-50/50 hover:bg-surface-50 transition-colors">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">

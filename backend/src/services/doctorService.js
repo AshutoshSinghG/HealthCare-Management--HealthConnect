@@ -168,4 +168,26 @@ const getDashboard = async (userId) => {
   };
 };
 
-module.exports = { getProfile, getPatients, getPatientDetail, getDashboard };
+/**
+ * Update doctor profile.
+ */
+const updateProfile = async (userId, updates) => {
+  const doctor = await Doctor.findOne({ userId });
+  if (!doctor) {
+    const err = new Error('Doctor profile not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const allowedFields = [
+    'firstName', 'lastName', 'specialisation', 'department', 'registrationNumber',
+    'contactEmail', 'contactPhone', 'qualifications', 'yearsOfExperience',
+    'bio', 'consultationHours', 'languages', 'address', 'dateOfBirth', 'gender',
+  ];
+  for (const field of allowedFields) {
+    if (updates[field] !== undefined) doctor[field] = updates[field];
+  }
+  await doctor.save();
+  return doctor;
+};
+
+module.exports = { getProfile, updateProfile, getPatients, getPatientDetail, getDashboard };
