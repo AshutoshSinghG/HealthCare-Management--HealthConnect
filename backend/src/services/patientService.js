@@ -179,49 +179,6 @@ const getUnsuitableMedicines = async (userId) => {
   return medicines;
 };
 
-/**
- * Get all medications for a patient across all treatments.
- */
-const getMedications = async (userId) => {
-  const patient = await Patient.findOne({ userId });
-  if (!patient) {
-    const err = new Error('Patient profile not found');
-    err.statusCode = 404;
-    throw err;
-  }
-
-  const treatments = await Treatment.find({ patientId: patient._id })
-    .populate('doctorId', 'firstName lastName specialisation')
-    .select('_id visitDate doctorId diagnosis');
-
-  const treatmentIds = treatments.map(t => t._id);
-  const medications = await Medication.find({ treatmentId: { $in: treatmentIds } }).lean();
-
-  // Build a map for quick lookup
-  const treatmentMap = {};
-  treatments.forEach(t => { treatmentMap[t._id.toString()] = t; });
-
-  // Enrich medications with treatment/doctor data and compute status
-  const now = new Date();
-  return medications.map(med => {
-    const treatment = treatmentMap[med.treatmentId.toString()];
-    const visitDate = treatment?.visitDate ? new Date(treatment.visitDate) : null;
-    const endDate = visitDate ? new Date(visitDate.getTime() + (med.durationDays || 0) * 24 * 60 * 60 * 1000) : null;
-    const isOngoing = med.durationDays === 0 || med.durationDays >= 365;
-    const status = isOngoing ? 'active' : (endDate && endDate >= now ? 'active' : 'completed');
-
-    return {
-      ...med,
-      status,
-      prescribedBy: treatment?.doctorId
-        ? `Dr. ${treatment.doctorId.firstName} ${treatment.doctorId.lastName}`
-        : 'Unknown',
-      prescribedDate: treatment?.visitDate || null,
-      diagnosis: treatment?.diagnosis || '',
-    };
-  });
-};
-
 module.exports = {
   getProfile,
   getDashboard,
@@ -229,5 +186,4 @@ module.exports = {
   getTreatments,
   getTreatmentById,
   getUnsuitableMedicines,
-  getMedications,
 };

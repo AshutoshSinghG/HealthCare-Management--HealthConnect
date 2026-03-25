@@ -30,11 +30,6 @@ export const getUnsuitableMedicines = async () => {
   return data.data;
 };
 
-export const getMedications = async () => {
-  const { data } = await api.get('/patients/me/medications');
-  return data.data;
-};
-
 export const exportPdf = async () => {
   const response = await api.get('/patients/me/export/pdf', { responseType: 'blob' });
   return response.data;
@@ -43,32 +38,4 @@ export const exportPdf = async () => {
 export const exportExcel = async () => {
   const response = await api.get('/patients/me/export/excel', { responseType: 'blob' });
   return response.data;
-};
-
-// --- Appointment APIs ---
-
-export const getMyAppointments = async (status) => {
-  const params = status ? { status } : {};
-  const { data } = await api.get('/appointments/me/appointments', { params });
-  return data.data;
-};
-
-export const bookAppointment = async (payload) => {
-  const { data } = await api.post('/appointments/me/appointments', payload);
-  return data.data;
-};
-
-export const cancelAppointment = async (id) => {
-  const { data } = await api.patch(`/appointments/me/appointments/${id}/cancel`);
-  return data.data;
-};
-
-export const getAvailableDoctors = async (filters = {}) => {
-  const { data } = await api.get('/appointments/doctors', { params: filters });
-  return data.data;
-};
-
-export const getDoctorSlots = async (doctorId, date) => {
-  const { data } = await api.get(`/appointments/doctors/${doctorId}/slots`, { params: { date } });
-  return data.data;
 };

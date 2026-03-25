@@ -97,16 +97,4 @@ const getDashboard = async (req, res, next) => {
   }
 };
 
-/**
- * GET /patients/me/medications
- */
-const getMedications = async (req, res, next) => {
-  try {
-    const medications = await patientService.getMedications(req.user.userId);
-    return success(res, 'Medications retrieved', medications);
-  } catch (err) {
-    next(err);
-  }
-};
-
-module.exports = { getProfile, updateProfile, getTreatments, getTreatmentById, getUnsuitableMedicines, getDashboard, getMedications };
+module.exports = { getProfile, updateProfile, getTreatments, getTreatmentById, getUnsuitableMedicines, getDashboard };

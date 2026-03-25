@@ -119,6 +119,4 @@ router.get('/me/treatments/:id', patientController.getTreatmentById);
  */
 router.get('/me/unsuitable-medicines', patientController.getUnsuitableMedicines);
 
-router.get('/me/medications', patientController.getMedications);
-
 module.exports = router;

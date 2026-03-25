@@ -18,8 +18,11 @@ const doctorRoutes = require('./routes/doctorRoutes');
 const treatmentRoutes = require('./routes/treatmentRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+<<<<<<< HEAD
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const slotRoutes = require('./routes/slotRoutes');
+=======
+>>>>>>> parent of beb5baa (Patien Dashbord Complete)
 
 const app = express();
 
@@ -65,8 +68,11 @@ app.use('/api/patients/me/export', exportRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/treatments', treatmentRoutes);
 app.use('/api/admin', adminRoutes);
+<<<<<<< HEAD
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctor-slots', slotRoutes);
+=======
+>>>>>>> parent of beb5baa (Patien Dashbord Complete)
 
 // --------------- Swagger Documentation ---------------
 
