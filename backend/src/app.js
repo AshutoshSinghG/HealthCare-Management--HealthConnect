@@ -18,6 +18,7 @@ const doctorRoutes = require('./routes/doctorRoutes');
 const treatmentRoutes = require('./routes/treatmentRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
 
 const app = express();
 
@@ -63,6 +64,7 @@ app.use('/api/patients/me/export', exportRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/treatments', treatmentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // --------------- Swagger Documentation ---------------
 

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays, Clock, MapPin, XCircle, CheckCircle,
-  Video, FileText, ChevronRight, AlertTriangle, User
+  Video, FileText, ChevronRight, AlertTriangle, User, Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -10,71 +10,75 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
-
-// ── Mock Data ──
-const initialAppointments = [
-  { id: 'A-101', doctor: 'Dr. Michael Chen', specialty: 'Cardiology', date: '2024-11-15', time: '10:00 AM', status: 'upcoming', type: 'In-person', hospital: 'City Central Hospital', fee: 150 },
-  { id: 'A-102', doctor: 'Dr. Sarah Williams', specialty: 'Dermatology', date: '2024-11-20', time: '02:30 PM', status: 'upcoming', type: 'Video Consult', hospital: 'SkinCare Clinic', fee: 120 },
-  { id: 'A-103', doctor: 'Dr. James Anderson', specialty: 'Neurology', date: '2024-09-10', time: '11:00 AM', status: 'completed', type: 'In-person', hospital: 'Neuro Center', fee: 200 },
-  { id: 'A-104', doctor: 'Dr. Emily Davis', specialty: 'Pediatrics', date: '2024-08-05', time: '09:30 AM', status: 'completed', type: 'In-person', hospital: 'Childrens Hospital', fee: 100 },
-  { id: 'A-105', doctor: 'Dr. Robert Wilson', specialty: 'General Medicine', date: '2024-10-12', time: '04:00 PM', status: 'cancelled', type: 'Video Consult', hospital: 'City Central Hospital', fee: 80 },
-];
+import { useMyAppointments, useCancelAppointment } from '../../hooks/usePatients';
 
 const tabs = [
-  { id: 'upcoming', label: 'Upcoming' },
-  { id: 'completed', label: 'Completed' },
-  { id: 'cancelled', label: 'Cancelled' },
+  { id: 'UPCOMING', label: 'Upcoming' },
+  { id: 'COMPLETED', label: 'Completed' },
+  { id: 'CANCELLED', label: 'Cancelled' },
 ];
 
 const PatientMyAppointments = () => {
-  const [appointments, setAppointments] = useState(initialAppointments);
-  const [activeTab, setActiveTab] = useState('upcoming');
+  const [activeTab, setActiveTab] = useState('UPCOMING');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
 
-  // Derived
+  const { data: appointments = [], isLoading, isError } = useMyAppointments();
+  const cancelMutation = useCancelAppointment();
+
   const filteredAppointments = useMemo(() => {
     return appointments.filter(a => a.status === activeTab);
   }, [appointments, activeTab]);
 
-  // Actions
   const handleCancelClick = (appointment) => {
     setSelectedAppointment(appointment);
     setCancelModalOpen(true);
   };
 
   const confirmCancel = async () => {
-    setIsProcessing(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1000));
-    
-    setAppointments(prev => prev.map(a => 
-      a.id === selectedAppointment.id ? { ...a, status: 'cancelled' } : a
-    ));
-    
-    setIsProcessing(false);
-    setCancelModalOpen(false);
-    toast.success('Appointment cancelled successfully');
-    
-    // Auto switch to cancelled tab so they see it moved
-    setActiveTab('cancelled');
+    try {
+      await cancelMutation.mutateAsync(selectedAppointment._id);
+      setCancelModalOpen(false);
+      toast.success('Appointment cancelled successfully');
+      setActiveTab('CANCELLED');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel appointment');
+    }
   };
+
+  const getDoctorName = (appt) => {
+    const d = appt.doctorId;
+    return d ? `Dr. ${d.firstName} ${d.lastName}` : 'Doctor';
+  };
+
+  const getSpecialty = (appt) => appt.doctorId?.specialisation || '';
 
   const EmptyState = () => (
     <div className="text-center py-16 bg-surface-50 rounded-2xl border border-surface-200">
       <CalendarDays className="w-16 h-16 mx-auto mb-4 text-surface-300" />
-      <h3 className="text-lg font-bold text-surface-800 mb-2">No {activeTab} appointments</h3>
+      <h3 className="text-lg font-bold text-surface-800 mb-2">No {activeTab.toLowerCase()} appointments</h3>
       <p className="text-surface-500 max-w-sm mx-auto mb-6">
-        {activeTab === 'upcoming' 
-          ? "You don't have any upcoming consultations scheduled." 
-          : `You have no ${activeTab} appointments in your history.`}
+        {activeTab === 'UPCOMING'
+          ? "You don't have any upcoming consultations scheduled."
+          : `You have no ${activeTab.toLowerCase()} appointments in your history.`}
       </p>
-      {activeTab === 'upcoming' && (
+      {activeTab === 'UPCOMING' && (
         <Link to="/patient/book-appointment">
           <Button icon={CalendarDays}>Book New Appointment</Button>
         </Link>
       )}
+    </div>
+  );
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+    </div>
+  );
+
+  if (isError) return (
+    <div className="text-center py-20 text-surface-500">
+      <p>Failed to load appointments. Please try again.</p>
     </div>
   );
 
@@ -100,8 +104,8 @@ const PatientMyAppointments = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-                  activeTab === tab.id 
-                    ? 'border-primary-500 text-primary-600' 
+                  activeTab === tab.id
+                    ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-surface-500 hover:text-surface-700'
                 }`}
               >
@@ -119,7 +123,7 @@ const PatientMyAppointments = () => {
 
       {/* Appointment List */}
       <AnimatePresence mode="wait">
-        <motion.div 
+        <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -131,23 +135,19 @@ const PatientMyAppointments = () => {
           ) : (
             <div className="space-y-4">
               {filteredAppointments.map(appt => (
-                <Card key={appt.id} className="overflow-hidden">
+                <Card key={appt._id} className="overflow-hidden">
                   <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
-                    
+
                     {/* Left: Doctor Info */}
                     <div className="flex items-start gap-4 flex-1">
                       <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center flex-shrink-0">
                         <User className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-surface-800 text-lg">{appt.doctor}</h3>
-                        <p className="text-sm text-primary-600 font-medium mb-2">{appt.specialty}</p>
-                        
+                        <h3 className="font-bold text-surface-800 text-lg">{getDoctorName(appt)}</h3>
+                        <p className="text-sm text-primary-600 font-medium mb-2">{getSpecialty(appt)}</p>
+
                         <div className="flex flex-wrap items-center gap-4 text-xs text-surface-500">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-4 h-4 text-surface-400" />
-                            <span>{appt.hospital}</span>
-                          </div>
                           <div className="flex items-center gap-1.5">
                             {appt.type === 'Video Consult' ? (
                               <Video className="w-4 h-4 text-surface-400" />
@@ -156,9 +156,11 @@ const PatientMyAppointments = () => {
                             )}
                             <span>{appt.type}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 font-medium text-surface-700">
-                            Fee: ${appt.fee}
-                          </div>
+                          {appt.fee > 0 && (
+                            <div className="flex items-center gap-1.5 font-medium text-surface-700">
+                              Fee: ${appt.fee}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -181,12 +183,12 @@ const PatientMyAppointments = () => {
 
                     {/* Right: Actions / Status */}
                     <div className="flex flex-col items-end justify-center min-w-[140px] gap-3">
-                      {appt.status === 'upcoming' && (
+                      {appt.status === 'UPCOMING' && (
                         <>
                           <Badge variant="warning" size="md">Upcoming</Badge>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="w-full text-danger-600 border-danger-200 hover:bg-danger-50"
                             onClick={() => handleCancelClick(appt)}
                           >
@@ -194,8 +196,8 @@ const PatientMyAppointments = () => {
                           </Button>
                         </>
                       )}
-                      
-                      {appt.status === 'completed' && (
+
+                      {appt.status === 'COMPLETED' && (
                         <>
                           <Badge variant="success" size="md" icon={CheckCircle}>Completed</Badge>
                           <Link to="/patient/treatments" className="w-full">
@@ -206,7 +208,7 @@ const PatientMyAppointments = () => {
                         </>
                       )}
 
-                      {appt.status === 'cancelled' && (
+                      {appt.status === 'CANCELLED' && (
                         <Badge variant="danger" size="md" icon={XCircle}>Cancelled</Badge>
                       )}
                     </div>
@@ -219,19 +221,19 @@ const PatientMyAppointments = () => {
       </AnimatePresence>
 
       {/* Cancel Confirmation Modal */}
-      <Modal isOpen={cancelModalOpen} onClose={() => !isProcessing && setCancelModalOpen(false)} title="Cancel Appointment" size="sm">
+      <Modal isOpen={cancelModalOpen} onClose={() => !cancelMutation.isPending && setCancelModalOpen(false)} title="Cancel Appointment" size="sm">
         <div className="text-center py-4 space-y-4">
           <div className="w-16 h-16 bg-danger-100 text-danger-500 rounded-full flex items-center justify-center mx-auto mb-2">
             <AlertTriangle className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-surface-800">Are you sure?</h3>
           <p className="text-surface-600 text-sm">
-            You are about to cancel your appointment with <strong>{selectedAppointment?.doctor}</strong> on <strong>{new Date(selectedAppointment?.date).toLocaleDateString()} at {selectedAppointment?.time}</strong>.
+            You are about to cancel your appointment with <strong>{selectedAppointment ? getDoctorName(selectedAppointment) : ''}</strong> on <strong>{selectedAppointment ? new Date(selectedAppointment.date).toLocaleDateString() : ''} at {selectedAppointment?.time}</strong>.
             This action cannot be undone.
           </p>
           <div className="flex gap-3 pt-4">
-            <Button variant="ghost" className="flex-1" onClick={() => setCancelModalOpen(false)} disabled={isProcessing}>Keep it</Button>
-            <Button className="flex-1 bg-danger-500 hover:bg-danger-600 text-white border-0" onClick={confirmCancel} loading={isProcessing}>Yes, Cancel</Button>
+            <Button variant="ghost" className="flex-1" onClick={() => setCancelModalOpen(false)} disabled={cancelMutation.isPending}>Keep it</Button>
+            <Button className="flex-1 bg-danger-500 hover:bg-danger-600 text-white border-0" onClick={confirmCancel} loading={cancelMutation.isPending}>Yes, Cancel</Button>
           </div>
         </div>
       </Modal>

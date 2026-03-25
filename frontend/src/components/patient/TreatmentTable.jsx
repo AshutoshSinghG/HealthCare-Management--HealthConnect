@@ -1,55 +1,36 @@
 import { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
-import { Search, ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Filter, Calendar, X, Eye } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Filter, Calendar, X, Eye, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatDate';
+import { useMyTreatments } from '../../hooks/usePatients';
 
-const mockTreatments = [
-  { id: '1', visitDate: '2026-03-05', doctor: 'Dr. Michael Chen', diagnosis: 'Upper Respiratory Infection', outcome: 'improved', followUp: '2026-03-19' },
-  { id: '2', visitDate: '2026-02-20', doctor: 'Dr. Sarah Wilson', diagnosis: 'Routine Checkup', outcome: 'recovered', followUp: null },
-  { id: '3', visitDate: '2026-02-10', doctor: 'Dr. Michael Chen', diagnosis: 'Hypertension Follow-up', outcome: 'stable', followUp: '2026-03-10' },
-  { id: '4', visitDate: '2026-01-28', doctor: 'Dr. Priya Sharma', diagnosis: 'Allergic Rhinitis', outcome: 'improved', followUp: '2026-02-28' },
-  { id: '5', visitDate: '2026-01-15', doctor: 'Dr. James Park', diagnosis: 'Type 2 Diabetes Review', outcome: 'stable', followUp: '2026-04-15' },
-  { id: '6', visitDate: '2025-12-20', doctor: 'Dr. Sarah Wilson', diagnosis: 'Annual Physical', outcome: 'recovered', followUp: null },
-  { id: '7', visitDate: '2025-12-05', doctor: 'Dr. Michael Chen', diagnosis: 'Migraine', outcome: 'improved', followUp: '2026-01-05' },
-  { id: '8', visitDate: '2025-11-18', doctor: 'Dr. Priya Sharma', diagnosis: 'Back Pain', outcome: 'stable', followUp: '2025-12-18' },
-  { id: '9', visitDate: '2025-11-02', doctor: 'Dr. James Park', diagnosis: 'Flu Symptoms', outcome: 'recovered', followUp: null },
-  { id: '10', visitDate: '2025-10-15', doctor: 'Dr. Michael Chen', diagnosis: 'Cholesterol Screening', outcome: 'stable', followUp: '2026-04-15' },
-  { id: '11', visitDate: '2025-09-22', doctor: 'Dr. Sarah Wilson', diagnosis: 'Skin Allergy', outcome: 'improved', followUp: '2025-10-22' },
-  { id: '12', visitDate: '2025-08-30', doctor: 'Dr. Priya Sharma', diagnosis: 'Vitamin D Deficiency', outcome: 'recovered', followUp: null },
-];
-
-const outcomeColors = { improved: 'success', recovered: 'success', stable: 'warning', worsened: 'danger', referred: 'info' };
-const uniqueDoctors = [...new Set(mockTreatments.map(t => t.doctor))];
-const uniqueDiagnoses = [...new Set(mockTreatments.map(t => t.diagnosis))];
+const outcomeColors = { ONGOING: 'warning', RESOLVED: 'success', REFERRED: 'info', FOLLOW_UP: 'warning' };
 
 const TreatmentTable = () => {
   const [sorting, setSorting] = useState([{ id: 'visitDate', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [doctorFilter, setDoctorFilter] = useState('');
-  const [diagnosisFilter, setDiagnosisFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const activeFilterCount = [doctorFilter, diagnosisFilter, dateFrom, dateTo].filter(Boolean).length;
+  const params = useMemo(() => {
+    const p = { limit: 100 };
+    if (dateFrom) p.startDate = dateFrom;
+    if (dateTo) p.endDate = dateTo;
+    if (globalFilter) p.search = globalFilter;
+    return p;
+  }, [dateFrom, dateTo, globalFilter]);
 
-  const filteredData = useMemo(() => {
-    return mockTreatments.filter(t => {
-      if (doctorFilter && t.doctor !== doctorFilter) return false;
-      if (diagnosisFilter && t.diagnosis !== diagnosisFilter) return false;
-      if (dateFrom && t.visitDate < dateFrom) return false;
-      if (dateTo && t.visitDate > dateTo) return false;
-      return true;
-    });
-  }, [doctorFilter, diagnosisFilter, dateFrom, dateTo]);
+  const { data, isLoading, isError } = useMyTreatments(params);
+  const treatments = data?.treatments || [];
+
+  const activeFilterCount = [dateFrom, dateTo].filter(Boolean).length;
 
   const clearFilters = () => {
-    setDoctorFilter('');
-    setDiagnosisFilter('');
     setDateFrom('');
     setDateTo('');
   };
@@ -61,8 +42,12 @@ const TreatmentTable = () => {
       cell: info => <span className="font-medium">{formatDate(info.getValue())}</span>,
     },
     {
-      accessorKey: 'doctor',
+      id: 'doctor',
       header: 'Doctor',
+      accessorFn: row => {
+        const d = row.doctorId;
+        return d ? `Dr. ${d.firstName} ${d.lastName}` : 'Unknown';
+      },
       cell: info => (
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-xs font-semibold text-primary-600">
@@ -77,12 +62,12 @@ const TreatmentTable = () => {
       header: 'Diagnosis',
     },
     {
-      accessorKey: 'outcome',
+      accessorKey: 'outcomeStatus',
       header: 'Outcome',
-      cell: info => <Badge variant={outcomeColors[info.getValue()]} size="sm" dot>{info.getValue()}</Badge>,
+      cell: info => <Badge variant={outcomeColors[info.getValue()] || 'info'} size="sm" dot>{info.getValue()}</Badge>,
     },
     {
-      accessorKey: 'followUp',
+      accessorKey: 'followUpDate',
       header: 'Follow Up',
       cell: info => info.getValue() ? (
         <span className="flex items-center gap-1.5 text-sm">
@@ -95,7 +80,7 @@ const TreatmentTable = () => {
       id: 'actions',
       header: '',
       cell: info => (
-        <Link to={`/patient/treatments/${info.row.original.id}`}>
+        <Link to={`/patient/treatments/${info.row.original._id}`}>
           <Button variant="ghost" size="sm" icon={Eye}>View</Button>
         </Link>
       ),
@@ -103,7 +88,7 @@ const TreatmentTable = () => {
   ], []);
 
   const table = useReactTable({
-    data: filteredData,
+    data: treatments,
     columns,
     state: { sorting, globalFilter },
     onSortingChange: setSorting,
@@ -115,6 +100,18 @@ const TreatmentTable = () => {
     initialState: { pagination: { pageSize: 5 } },
   });
 
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+    </div>
+  );
+
+  if (isError) return (
+    <div className="text-center py-20 text-surface-500">
+      <p>Failed to load treatments. Please try again.</p>
+    </div>
+  );
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-surface-200/60 shadow-card overflow-hidden">
       {/* Toolbar */}
@@ -125,7 +122,7 @@ const TreatmentTable = () => {
             <input
               value={globalFilter ?? ''}
               onChange={e => setGlobalFilter(e.target.value)}
-              placeholder="Search by diagnosis, doctor, keywords..."
+              placeholder="Search by diagnosis, keywords..."
               className="pl-10 pr-4 py-2 bg-surface-50 border border-surface-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
@@ -161,46 +158,14 @@ const TreatmentTable = () => {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="mt-4 pt-4 border-t border-surface-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="mt-4 pt-4 border-t border-surface-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-surface-500 uppercase tracking-wider">Date From</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={e => setDateFrom(e.target.value)}
-                    className="input-base text-sm"
-                  />
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input-base text-sm" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-surface-500 uppercase tracking-wider">Date To</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={e => setDateTo(e.target.value)}
-                    className="input-base text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-surface-500 uppercase tracking-wider">Doctor</label>
-                  <select
-                    value={doctorFilter}
-                    onChange={e => setDoctorFilter(e.target.value)}
-                    className="input-base text-sm"
-                  >
-                    <option value="">All Doctors</option>
-                    {uniqueDoctors.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-surface-500 uppercase tracking-wider">Diagnosis</label>
-                  <select
-                    value={diagnosisFilter}
-                    onChange={e => setDiagnosisFilter(e.target.value)}
-                    className="input-base text-sm"
-                  >
-                    <option value="">All Diagnoses</option>
-                    {uniqueDiagnoses.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input-base text-sm" />
                 </div>
               </div>
             </motion.div>
