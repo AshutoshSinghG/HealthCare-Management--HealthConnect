@@ -42,32 +42,9 @@ const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'Jul
 
 const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-// ── initial data ──
 const today = new Date();
 const todayStr = fmtDate(today);
-const tmrw = new Date(today); tmrw.setDate(tmrw.getDate() + 1);
-const tmrwStr = fmtDate(tmrw);
-const day3 = new Date(today); day3.setDate(day3.getDate() + 2);
-const day3Str = fmtDate(day3);
 
-const initialBookings = [
-  { id: 1, date: todayStr, from: '09:00', to: '09:30', patient: 'Sarah Johnson', patientId: 'P-1001', status: 'booked', reason: 'Follow-up checkup' },
-  { id: 2, date: todayStr, from: '10:00', to: '10:30', patient: 'Robert Williams', patientId: 'P-1002', status: 'pending', reason: 'Fever and headache' },
-  { id: 3, date: todayStr, from: '11:00', to: '11:30', patient: 'Emily Davis', patientId: 'P-1003', status: 'booked', reason: 'Asthma review' },
-  { id: 4, date: todayStr, from: '14:00', to: '14:30', patient: 'James Brown', patientId: 'P-1004', status: 'rejected', reason: 'General consultation' },
-  { id: 5, date: todayStr, from: '15:00', to: '15:30', patient: 'Lisa Anderson', patientId: 'P-1005', status: 'pending', reason: 'Knee pain' },
-  { id: 6, date: tmrwStr, from: '09:00', to: '09:30', patient: 'David Wilson', patientId: 'P-1006', status: 'booked', reason: 'Blood pressure check' },
-  { id: 7, date: tmrwStr, from: '10:30', to: '11:00', patient: 'Maria Garcia', patientId: 'P-1007', status: 'pending', reason: 'Thyroid follow-up' },
-  { id: 8, date: day3Str, from: '09:30', to: '10:00', patient: 'Alex Turner', patientId: 'P-1008', status: 'pending', reason: 'Skin rash' },
-  { id: 9, date: day3Str, from: '11:00', to: '11:30', patient: 'Nina Patel', patientId: 'P-1009', status: 'booked', reason: 'Diabetes review' },
-];
-
-const initialAvailability = {
-  startTime: '09:00',
-  endTime: '17:00',
-  consultationFee: 150,
-  workingDays: [1, 2, 3, 4, 5], // Mon–Fri
-};
 
 const viewModes = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 const statusColors = { booked: 'success', pending: 'warning', rejected: 'danger', vacant: 'default' };

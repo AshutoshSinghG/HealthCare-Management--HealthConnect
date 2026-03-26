@@ -1,20 +1,9 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pill, Search, Filter, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Pill, Search, Filter, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
-
-const mockMedications = [
-  { id: 1, name: 'Amlodipine', dosage: '5mg', frequency: 'Once Daily (OD)', duration: 'Ongoing', route: 'Oral', prescribedBy: 'Dr. Michael Chen', prescribedDate: '2025-06-15', status: 'active', notes: 'Take in the morning. Monitor blood pressure weekly.' },
-  { id: 2, name: 'Salbutamol Inhaler', dosage: '100mcg', frequency: 'As Needed (PRN)', duration: 'Ongoing', route: 'Inhalation', prescribedBy: 'Dr. Sarah Wilson', prescribedDate: '2025-08-20', status: 'active', notes: 'Use during asthma episodes. Max 4 puffs per day.' },
-  { id: 3, name: 'Amoxicillin', dosage: '500mg', frequency: 'Three Times Daily (TDS)', duration: '7 days', route: 'Oral', prescribedBy: 'Dr. Michael Chen', prescribedDate: '2026-03-05', status: 'active', notes: 'Complete full course. Take after meals.' },
-  { id: 4, name: 'Paracetamol', dosage: '650mg', frequency: 'As Needed (PRN)', duration: '5 days', route: 'Oral', prescribedBy: 'Dr. Michael Chen', prescribedDate: '2026-03-05', status: 'active', notes: 'For fever above 100°F only.' },
-  { id: 5, name: 'Benadryl Cough Syrup', dosage: '10ml', frequency: 'Twice Daily (BD)', duration: '5 days', route: 'Oral', prescribedBy: 'Dr. Michael Chen', prescribedDate: '2026-03-05', status: 'active', notes: 'Before bedtime preferably.' },
-  { id: 6, name: 'Ciprofloxacin', dosage: '500mg', frequency: 'Twice Daily (BD)', duration: '5 days', route: 'Oral', prescribedBy: 'Dr. James Park', prescribedDate: '2025-11-02', status: 'completed', notes: 'Course completed successfully.' },
-  { id: 7, name: 'Omeprazole', dosage: '20mg', frequency: 'Once Daily (OD)', duration: '14 days', route: 'Oral', prescribedBy: 'Dr. Priya Sharma', prescribedDate: '2025-09-22', status: 'completed', notes: 'Take 30 minutes before breakfast.' },
-  { id: 8, name: 'Cetirizine', dosage: '10mg', frequency: 'Once Daily (OD)', duration: '10 days', route: 'Oral', prescribedBy: 'Dr. Priya Sharma', prescribedDate: '2026-01-28', status: 'completed', notes: 'For seasonal allergies.' },
-  { id: 9, name: 'Atorvastatin', dosage: '10mg', frequency: 'Once Daily (OD)', duration: '30 days', route: 'Oral', prescribedBy: 'Dr. Michael Chen', prescribedDate: '2025-10-15', status: 'discontinued', notes: 'Discontinued due to muscle pain side effects.' },
-];
+import { useMyMedications } from '../../hooks/usePatients';
 
 const statusConfig = {
   active: { color: 'success', icon: CheckCircle, label: 'Active' },
@@ -23,11 +12,12 @@ const statusConfig = {
 };
 
 const Medications = () => {
+  const { data: medications = [], isLoading } = useMyMedications();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   const filteredMeds = useMemo(() => {
-    return mockMedications.filter(m => {
+    return medications.filter(m => {
       if (statusFilter && m.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -35,11 +25,22 @@ const Medications = () => {
       }
       return true;
     });
-  }, [search, statusFilter]);
+  }, [medications, search, statusFilter]);
 
-  const activeCount = mockMedications.filter(m => m.status === 'active').length;
-  const completedCount = mockMedications.filter(m => m.status === 'completed').length;
-  const discontinuedCount = mockMedications.filter(m => m.status === 'discontinued').length;
+  const activeCount = medications.filter(m => m.status === 'active').length;
+  const completedCount = medications.filter(m => m.status === 'completed').length;
+  const discontinuedCount = medications.filter(m => m.status === 'discontinued').length;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading medications...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -102,7 +103,7 @@ const Medications = () => {
           </div>
         ) : (
           filteredMeds.map((med, i) => {
-            const config = statusConfig[med.status];
+            const config = statusConfig[med.status] || statusConfig.active;
             const StatusIcon = config.icon;
             return (
               <motion.div

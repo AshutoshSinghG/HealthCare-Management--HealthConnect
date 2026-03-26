@@ -130,6 +130,7 @@ export const useCreateDoctorSlot = () => {
     mutationFn: createDoctorSlot,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['doctor', 'slots'] });
+      qc.invalidateQueries({ queryKey: ['public', 'doctor-slots'] });
     },
   });
 };
@@ -140,6 +141,7 @@ export const useDeleteDoctorSlot = () => {
     mutationFn: deleteDoctorSlot,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['doctor', 'slots'] });
+      qc.invalidateQueries({ queryKey: ['public', 'doctor-slots'] });
     },
   });
 };
@@ -150,6 +152,7 @@ export const useUpdateSlotStatus = () => {
     mutationFn: ({ id, status }) => updateSlotStatus(id, status),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['doctor', 'slots'] });
+      qc.invalidateQueries({ queryKey: ['public', 'doctor-slots'] });
     },
   });
 };

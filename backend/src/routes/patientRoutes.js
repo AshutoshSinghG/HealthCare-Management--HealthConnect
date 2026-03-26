@@ -107,6 +107,20 @@ router.get('/me/treatments/:id', patientController.getTreatmentById);
 
 /**
  * @swagger
+ * /api/patients/me/medications:
+ *   get:
+ *     tags: [Patients]
+ *     summary: Get all medications across treatments
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Medications list
+ */
+router.get('/me/medications', patientController.getMedications);
+
+/**
+ * @swagger
  * /api/patients/me/unsuitable-medicines:
  *   get:
  *     tags: [Patients]

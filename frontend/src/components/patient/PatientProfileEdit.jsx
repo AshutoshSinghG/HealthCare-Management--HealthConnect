@@ -1,38 +1,58 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Calendar, Droplets, Heart, Shield, Save, ArrowLeft, Plus, X, Camera } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Droplets, Heart, Shield, Save, ArrowLeft, Plus, X, Camera, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
-
-const initialProfile = {
-  name: 'Sarah Johnson',
-  email: 'sarah.j@email.com',
-  phone: '+1-555-0101',
-  dob: '1990-05-15',
-  gender: 'Female',
-  bloodGroup: 'O+',
-  address: '742 Evergreen Terrace, Springfield, IL 62704',
-  allergies: ['Penicillin', 'Peanuts'],
-  chronicConditions: ['Hypertension', 'Mild Asthma'],
-  emergencyContact: {
-    name: 'John Johnson',
-    relation: 'Spouse',
-    phone: '+1-555-9999',
-    address: '742 Evergreen Terrace, Springfield, IL 62704',
-  },
-};
+import { usePatientProfile, useUpdatePatientProfile } from '../../hooks/usePatients';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const PatientProfileEdit = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState(initialProfile);
+  const { data: profile, isLoading } = usePatientProfile();
+  const updateMutation = useUpdatePatientProfile();
+
+  const [form, setForm] = useState(null);
   const [newAllergy, setNewAllergy] = useState('');
   const [newCondition, setNewCondition] = useState('');
-  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile && !form) {
+      setForm({
+        name: `${profile.firstName} ${profile.lastName}`,
+        email: profile.userId?.email || '',
+        phone: profile.phoneNumber || '',
+        dob: profile.dateOfBirth ? new Date(profile.dateOfBirth).toISOString().split('T')[0] : '',
+        gender: profile.gender || 'Male',
+        bloodGroup: profile.bloodGroup || 'O+',
+        address: profile.address
+          ? [profile.address.street, profile.address.city, profile.address.state, profile.address.zipCode, profile.address.country].filter(Boolean).join(', ')
+          : '',
+        allergies: profile.knownAllergies || [],
+        chronicConditions: profile.chronicConditions || [],
+        emergencyContact: {
+          name: profile.emergencyContactName || '',
+          relation: 'Spouse',
+          phone: profile.emergencyContactPhone || '',
+          address: '',
+        },
+      });
+    }
+  }, [profile, form]);
+
+  if (isLoading || !form) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
   const updateEmergency = (field, value) => setForm(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, [field]: value } }));
@@ -54,11 +74,30 @@ const PatientProfileEdit = () => {
   const removeCondition = (idx) => setForm(prev => ({ ...prev, chronicConditions: prev.chronicConditions.filter((_, i) => i !== idx) }));
 
   const handleSave = async () => {
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSaving(false);
-    toast.success('Profile updated successfully!');
-    navigate('/patient/dashboard');
+    const nameParts = form.name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    const payload = {
+      firstName,
+      lastName,
+      phoneNumber: form.phone,
+      dateOfBirth: form.dob,
+      gender: form.gender,
+      bloodGroup: form.bloodGroup,
+      knownAllergies: form.allergies,
+      chronicConditions: form.chronicConditions,
+      emergencyContactName: form.emergencyContact.name,
+      emergencyContactPhone: form.emergencyContact.phone,
+    };
+
+    try {
+      await updateMutation.mutateAsync(payload);
+      toast.success('Profile updated successfully!');
+      navigate('/patient/dashboard');
+    } catch {
+      toast.error('Failed to update profile');
+    }
   };
 
   return (
@@ -226,7 +265,7 @@ const PatientProfileEdit = () => {
         <Link to="/patient/dashboard">
           <Button variant="ghost">Cancel</Button>
         </Link>
-        <Button icon={Save} size="lg" loading={saving} onClick={handleSave}>
+        <Button icon={Save} size="lg" loading={updateMutation.isPending} onClick={handleSave}>
           Save Changes
         </Button>
       </div>

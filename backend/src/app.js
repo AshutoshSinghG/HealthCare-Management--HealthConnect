@@ -18,6 +18,9 @@ const doctorRoutes = require('./routes/doctorRoutes');
 const treatmentRoutes = require('./routes/treatmentRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const slotRoutes = require('./routes/slotRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const publicDoctorRoutes = require('./routes/publicDoctorRoutes');
 
 const app = express();
 
@@ -63,6 +66,9 @@ app.use('/api/patients/me/export', exportRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/treatments', treatmentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/doctor-slots', slotRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/public', publicDoctorRoutes);
 // --------------- Swagger Documentation ---------------
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

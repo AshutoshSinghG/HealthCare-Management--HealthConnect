@@ -21,20 +21,27 @@ const createTreatment = async ({
     throw err;
   }
 
-  const { medications: medsData, ...treatmentFields } = treatmentData;
+  const { medications: medsData, outcome, instructions, ...treatmentFields } = treatmentData;
 
   const treatment = await Treatment.create({
     ...treatmentFields,
     patientId,
     doctorId: doctor._id,
+    outcomeStatus: outcome || 'ONGOING',
+    followUpInstructions: instructions || '',
   });
 
   // Create medications if provided
   let medications = [];
   if (medsData && medsData.length > 0) {
     const medsToInsert = medsData.map((med) => ({
-      ...med,
       treatmentId: treatment._id,
+      medicineName: med.name || 'Unknown',
+      dosage: med.dosage || 'Unknown',
+      frequency: med.frequency || 'As prescribed',
+      durationDays: parseInt(med.duration, 10) || 1,
+      routeOfAdmin: med.route ? med.route.toUpperCase() : 'ORAL',
+      notes: med.notes || '',
     }));
     medications = await Medication.insertMany(medsToInsert);
   }
@@ -86,11 +93,34 @@ const updateTreatment = async ({
 
   const oldValues = treatment.toObject();
 
-  // Increment version
-  updates.version = (treatment.version || 1) + 1;
+  // Extract properties that need to be mapped explicitly
+  const { medications: medsData, outcome, instructions, ...treatmentUpdates } = updates;
 
-  Object.assign(treatment, updates);
+  // Increment version
+  treatmentUpdates.version = (treatment.version || 1) + 1;
+  
+  if (outcome !== undefined) treatmentUpdates.outcomeStatus = outcome;
+  if (instructions !== undefined) treatmentUpdates.followUpInstructions = instructions;
+
+  Object.assign(treatment, treatmentUpdates);
   await treatment.save();
+
+  // Recreate medications if updated
+  if (medsData !== undefined) {
+    await Medication.deleteMany({ treatmentId: treatment._id });
+    if (medsData.length > 0) {
+      const medsToInsert = medsData.map((med) => ({
+        treatmentId: treatment._id,
+        medicineName: med.name || 'Unknown',
+        dosage: med.dosage || 'Unknown',
+        frequency: med.frequency || 'As prescribed',
+        durationDays: parseInt(med.duration, 10) || 1,
+        routeOfAdmin: med.route ? med.route.toUpperCase() : 'ORAL',
+        notes: med.notes || '',
+      }));
+      await Medication.insertMany(medsToInsert);
+    }
+  }
 
   // Audit log
   await logAction({

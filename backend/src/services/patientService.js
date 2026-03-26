@@ -2,6 +2,7 @@ const Patient = require('../models/Patient');
 const Treatment = require('../models/Treatment');
 const Medication = require('../models/Medication');
 const UnsuitableMedicine = require('../models/UnsuitableMedicine');
+const Doctor = require('../models/Doctor');
 
 /**
  * Get patient profile by userId.
@@ -179,6 +180,49 @@ const getUnsuitableMedicines = async (userId) => {
   return medicines;
 };
 
+/**
+ * Get all medications for a patient across all treatments.
+ */
+const getMedications = async (userId) => {
+  const patient = await Patient.findOne({ userId });
+  if (!patient) {
+    const err = new Error('Patient profile not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Get all treatments for the patient with doctor info
+  const treatments = await Treatment.find({ patientId: patient._id })
+    .populate('doctorId', 'firstName lastName')
+    .sort({ visitDate: -1 });
+
+  const treatmentIds = treatments.map(t => t._id);
+  const treatmentMap = {};
+  treatments.forEach(t => {
+    treatmentMap[t._id.toString()] = t;
+  });
+
+  // Get all medications for those treatments
+  const medications = await Medication.find({ treatmentId: { $in: treatmentIds } }).sort({ createdAt: -1 });
+
+  return medications.map(med => {
+    const treatment = treatmentMap[med.treatmentId.toString()];
+    const doctor = treatment?.doctorId;
+    return {
+      id: med._id,
+      name: med.medicineName,
+      dosage: med.dosage,
+      frequency: med.frequency,
+      duration: med.durationDays ? `${med.durationDays} days` : 'Ongoing',
+      route: med.routeOfAdmin || 'Oral',
+      prescribedBy: doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : 'Unknown',
+      prescribedDate: treatment?.visitDate ? treatment.visitDate.toISOString().split('T')[0] : '',
+      status: 'active', // All medications from Medication model are considered active
+      notes: med.notes || '',
+    };
+  });
+};
+
 module.exports = {
   getProfile,
   getDashboard,
@@ -186,4 +230,5 @@ module.exports = {
   getTreatments,
   getTreatmentById,
   getUnsuitableMedicines,
+  getMedications,
 };

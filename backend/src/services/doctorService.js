@@ -30,14 +30,25 @@ const getPatients = async (userId, query) => {
   const { page = 1, limit = 10 } = query;
   const skip = (page - 1) * limit;
 
-  // Find distinct patient IDs from treatments by this doctor
-  const patientIds = await Treatment.distinct('patientId', { doctorId: doctor._id });
+  // Find distinct patient IDs from treatments AND slots by this doctor
+  const treatmentPatientIds = await Treatment.distinct('patientId', { doctorId: doctor._id });
+  const slotPatientIdsString = await require('../models/DoctorSlot').distinct('patientId', { 
+    doctorId: doctor._id,
+    status: { $in: ['booked', 'pending', 'completed'] },
+    patientId: { $ne: '' }
+  });
+
+  const allPatientIds = new Set([
+    ...treatmentPatientIds.map(id => id.toString()),
+    ...slotPatientIdsString
+  ]);
+  const patientIdArray = Array.from(allPatientIds);
 
   const [patients, total] = await Promise.all([
-    Patient.find({ _id: { $in: patientIds } })
+    Patient.find({ _id: { $in: patientIdArray } })
       .skip(skip)
       .limit(Number(limit)),
-    Patient.countDocuments({ _id: { $in: patientIds } }),
+    Patient.countDocuments({ _id: { $in: patientIdArray } }),
   ]);
 
   return {

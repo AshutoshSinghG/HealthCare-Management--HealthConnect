@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays, Clock, MapPin, XCircle, CheckCircle,
-  Video, FileText, ChevronRight, AlertTriangle, User
+  Video, FileText, ChevronRight, AlertTriangle, User, Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -10,15 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
-
-// ── Mock Data ──
-const initialAppointments = [
-  { id: 'A-101', doctor: 'Dr. Michael Chen', specialty: 'Cardiology', date: '2024-11-15', time: '10:00 AM', status: 'upcoming', type: 'In-person', hospital: 'City Central Hospital', fee: 150 },
-  { id: 'A-102', doctor: 'Dr. Sarah Williams', specialty: 'Dermatology', date: '2024-11-20', time: '02:30 PM', status: 'upcoming', type: 'Video Consult', hospital: 'SkinCare Clinic', fee: 120 },
-  { id: 'A-103', doctor: 'Dr. James Anderson', specialty: 'Neurology', date: '2024-09-10', time: '11:00 AM', status: 'completed', type: 'In-person', hospital: 'Neuro Center', fee: 200 },
-  { id: 'A-104', doctor: 'Dr. Emily Davis', specialty: 'Pediatrics', date: '2024-08-05', time: '09:30 AM', status: 'completed', type: 'In-person', hospital: 'Childrens Hospital', fee: 100 },
-  { id: 'A-105', doctor: 'Dr. Robert Wilson', specialty: 'General Medicine', date: '2024-10-12', time: '04:00 PM', status: 'cancelled', type: 'Video Consult', hospital: 'City Central Hospital', fee: 80 },
-];
+import { useMyAppointments, useCancelAppointment } from '../../hooks/usePatients';
 
 const tabs = [
   { id: 'upcoming', label: 'Upcoming' },
@@ -27,11 +19,12 @@ const tabs = [
 ];
 
 const PatientMyAppointments = () => {
-  const [appointments, setAppointments] = useState(initialAppointments);
+  const { data: appointments = [], isLoading } = useMyAppointments();
+  const cancelMutation = useCancelAppointment();
+
   const [activeTab, setActiveTab] = useState('upcoming');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   // Derived
   const filteredAppointments = useMemo(() => {
@@ -45,21 +38,26 @@ const PatientMyAppointments = () => {
   };
 
   const confirmCancel = async () => {
-    setIsProcessing(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1000));
-    
-    setAppointments(prev => prev.map(a => 
-      a.id === selectedAppointment.id ? { ...a, status: 'cancelled' } : a
-    ));
-    
-    setIsProcessing(false);
-    setCancelModalOpen(false);
-    toast.success('Appointment cancelled successfully');
-    
-    // Auto switch to cancelled tab so they see it moved
-    setActiveTab('cancelled');
+    try {
+      await cancelMutation.mutateAsync(selectedAppointment.id);
+      setCancelModalOpen(false);
+      toast.success('Appointment cancelled successfully');
+      setActiveTab('cancelled');
+    } catch {
+      toast.error('Failed to cancel appointment');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading appointments...</p>
+        </div>
+      </div>
+    );
+  }
 
   const EmptyState = () => (
     <div className="text-center py-16 bg-surface-50 rounded-2xl border border-surface-200">
@@ -219,7 +217,7 @@ const PatientMyAppointments = () => {
       </AnimatePresence>
 
       {/* Cancel Confirmation Modal */}
-      <Modal isOpen={cancelModalOpen} onClose={() => !isProcessing && setCancelModalOpen(false)} title="Cancel Appointment" size="sm">
+      <Modal isOpen={cancelModalOpen} onClose={() => !cancelMutation.isPending && setCancelModalOpen(false)} title="Cancel Appointment" size="sm">
         <div className="text-center py-4 space-y-4">
           <div className="w-16 h-16 bg-danger-100 text-danger-500 rounded-full flex items-center justify-center mx-auto mb-2">
             <AlertTriangle className="w-8 h-8" />
@@ -230,8 +228,8 @@ const PatientMyAppointments = () => {
             This action cannot be undone.
           </p>
           <div className="flex gap-3 pt-4">
-            <Button variant="ghost" className="flex-1" onClick={() => setCancelModalOpen(false)} disabled={isProcessing}>Keep it</Button>
-            <Button className="flex-1 bg-danger-500 hover:bg-danger-600 text-white border-0" onClick={confirmCancel} loading={isProcessing}>Yes, Cancel</Button>
+            <Button variant="ghost" className="flex-1" onClick={() => setCancelModalOpen(false)} disabled={cancelMutation.isPending}>Keep it</Button>
+            <Button className="flex-1 bg-danger-500 hover:bg-danger-600 text-white border-0" onClick={confirmCancel} loading={cancelMutation.isPending}>Yes, Cancel</Button>
           </div>
         </div>
       </Modal>

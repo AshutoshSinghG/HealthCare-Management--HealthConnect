@@ -10,24 +10,25 @@ const createTreatmentSchema = Joi.object({
   diagnosis: Joi.string().trim().min(1).max(1000).required().messages({
     'any.required': 'Diagnosis is required',
   }),
-  icdCode: Joi.string().trim().allow('').optional(),
-  treatmentPlan: Joi.string().trim().allow('').optional(),
-  followUpDate: Joi.date().allow(null).optional(),
-  followUpInstructions: Joi.string().trim().allow('').optional(),
-  outcomeStatus: Joi.string()
-    .valid('ONGOING', 'RESOLVED', 'REFERRED', 'FOLLOW_UP')
+  icdCode: Joi.string().trim().allow('', null).optional(),
+  treatmentPlan: Joi.string().trim().min(1).required().messages({
+    'any.required': 'Treatment plan is required',
+  }),
+  followUpDate: Joi.date().allow('', null).optional(),
+  instructions: Joi.string().trim().allow('', null).optional(),
+  outcome: Joi.string()
+    .valid('ONGOING', 'RESOLVED', 'REFERRED', 'FOLLOW_UP', '')
+    .allow('', null)
     .default('ONGOING'),
-  notes: Joi.string().trim().allow('').optional(),
+  notes: Joi.string().trim().allow('', null).optional(),
   medications: Joi.array()
     .items(
       Joi.object({
-        medicineName: Joi.string().trim().required(),
+        name: Joi.string().trim().required(),
         dosage: Joi.string().trim().required(),
-        frequency: Joi.string().trim().required(),
-        durationDays: Joi.number().integer().min(1).required(),
-        routeOfAdmin: Joi.string()
-          .valid('ORAL', 'IV', 'IM', 'TOPICAL', 'INHALATION', 'SUBLINGUAL', 'RECTAL', 'OTHER')
-          .default('ORAL'),
+        frequency: Joi.string().trim().allow('').optional(),
+        duration: Joi.string().trim().allow('').optional(),
+        route: Joi.string().trim().allow('').optional(),
         notes: Joi.string().trim().allow('').optional(),
       })
     )
@@ -40,11 +41,23 @@ const updateTreatmentSchema = Joi.object({
   icdCode: Joi.string().trim().allow('').optional(),
   treatmentPlan: Joi.string().trim().allow('').optional(),
   followUpDate: Joi.date().allow(null).optional(),
-  followUpInstructions: Joi.string().trim().allow('').optional(),
-  outcomeStatus: Joi.string()
-    .valid('ONGOING', 'RESOLVED', 'REFERRED', 'FOLLOW_UP')
+  instructions: Joi.string().trim().allow('').optional(),
+  outcome: Joi.string()
+    .valid('ONGOING', 'RESOLVED', 'REFERRED', 'FOLLOW_UP', '')
     .optional(),
   notes: Joi.string().trim().allow('').optional(),
+  medications: Joi.array()
+    .items(
+      Joi.object({
+        name: Joi.string().trim().required(),
+        dosage: Joi.string().trim().required(),
+        frequency: Joi.string().trim().allow('').optional(),
+        duration: Joi.string().trim().allow('').optional(),
+        route: Joi.string().trim().allow('').optional(),
+        notes: Joi.string().trim().allow('').optional(),
+      })
+    )
+    .optional(),
 }).min(1);
 
 module.exports = { createTreatmentSchema, updateTreatmentSchema };

@@ -1,32 +1,30 @@
 import { useState, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
-import { Search, ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Filter, Calendar, X, Eye } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Filter, Calendar, X, Eye, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatDate';
+import { useMyTreatments } from '../../hooks/usePatients';
 
-const mockTreatments = [
-  { id: '1', visitDate: '2026-03-05', doctor: 'Dr. Michael Chen', diagnosis: 'Upper Respiratory Infection', outcome: 'improved', followUp: '2026-03-19' },
-  { id: '2', visitDate: '2026-02-20', doctor: 'Dr. Sarah Wilson', diagnosis: 'Routine Checkup', outcome: 'recovered', followUp: null },
-  { id: '3', visitDate: '2026-02-10', doctor: 'Dr. Michael Chen', diagnosis: 'Hypertension Follow-up', outcome: 'stable', followUp: '2026-03-10' },
-  { id: '4', visitDate: '2026-01-28', doctor: 'Dr. Priya Sharma', diagnosis: 'Allergic Rhinitis', outcome: 'improved', followUp: '2026-02-28' },
-  { id: '5', visitDate: '2026-01-15', doctor: 'Dr. James Park', diagnosis: 'Type 2 Diabetes Review', outcome: 'stable', followUp: '2026-04-15' },
-  { id: '6', visitDate: '2025-12-20', doctor: 'Dr. Sarah Wilson', diagnosis: 'Annual Physical', outcome: 'recovered', followUp: null },
-  { id: '7', visitDate: '2025-12-05', doctor: 'Dr. Michael Chen', diagnosis: 'Migraine', outcome: 'improved', followUp: '2026-01-05' },
-  { id: '8', visitDate: '2025-11-18', doctor: 'Dr. Priya Sharma', diagnosis: 'Back Pain', outcome: 'stable', followUp: '2025-12-18' },
-  { id: '9', visitDate: '2025-11-02', doctor: 'Dr. James Park', diagnosis: 'Flu Symptoms', outcome: 'recovered', followUp: null },
-  { id: '10', visitDate: '2025-10-15', doctor: 'Dr. Michael Chen', diagnosis: 'Cholesterol Screening', outcome: 'stable', followUp: '2026-04-15' },
-  { id: '11', visitDate: '2025-09-22', doctor: 'Dr. Sarah Wilson', diagnosis: 'Skin Allergy', outcome: 'improved', followUp: '2025-10-22' },
-  { id: '12', visitDate: '2025-08-30', doctor: 'Dr. Priya Sharma', diagnosis: 'Vitamin D Deficiency', outcome: 'recovered', followUp: null },
-];
-
-const outcomeColors = { improved: 'success', recovered: 'success', stable: 'warning', worsened: 'danger', referred: 'info' };
-const uniqueDoctors = [...new Set(mockTreatments.map(t => t.doctor))];
-const uniqueDiagnoses = [...new Set(mockTreatments.map(t => t.diagnosis))];
+const outcomeColors = { improved: 'success', recovered: 'success', stable: 'warning', worsened: 'danger', referred: 'info', ONGOING: 'info', RESOLVED: 'success', REFERRED: 'warning', FOLLOW_UP: 'warning' };
 
 const TreatmentTable = () => {
+  const { data: treatmentData, isLoading } = useMyTreatments({ limit: 100 });
+
+  const treatments = useMemo(() => {
+    if (!treatmentData?.treatments) return [];
+    return treatmentData.treatments.map(t => ({
+      id: t._id,
+      visitDate: t.visitDate,
+      doctor: t.doctorId ? `Dr. ${t.doctorId.firstName} ${t.doctorId.lastName}` : 'N/A',
+      diagnosis: t.diagnosis,
+      outcome: t.outcomeStatus || 'ONGOING',
+      followUp: t.followUpDate || null,
+    }));
+  }, [treatmentData]);
+
   const [sorting, setSorting] = useState([{ id: 'visitDate', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -35,17 +33,20 @@ const TreatmentTable = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  const uniqueDoctors = useMemo(() => [...new Set(treatments.map(t => t.doctor))], [treatments]);
+  const uniqueDiagnoses = useMemo(() => [...new Set(treatments.map(t => t.diagnosis))], [treatments]);
+
   const activeFilterCount = [doctorFilter, diagnosisFilter, dateFrom, dateTo].filter(Boolean).length;
 
   const filteredData = useMemo(() => {
-    return mockTreatments.filter(t => {
+    return treatments.filter(t => {
       if (doctorFilter && t.doctor !== doctorFilter) return false;
       if (diagnosisFilter && t.diagnosis !== diagnosisFilter) return false;
-      if (dateFrom && t.visitDate < dateFrom) return false;
-      if (dateTo && t.visitDate > dateTo) return false;
+      if (dateFrom && new Date(t.visitDate) < new Date(dateFrom)) return false;
+      if (dateTo && new Date(t.visitDate) > new Date(dateTo)) return false;
       return true;
     });
-  }, [doctorFilter, diagnosisFilter, dateFrom, dateTo]);
+  }, [treatments, doctorFilter, diagnosisFilter, dateFrom, dateTo]);
 
   const clearFilters = () => {
     setDoctorFilter('');
@@ -79,7 +80,7 @@ const TreatmentTable = () => {
     {
       accessorKey: 'outcome',
       header: 'Outcome',
-      cell: info => <Badge variant={outcomeColors[info.getValue()]} size="sm" dot>{info.getValue()}</Badge>,
+      cell: info => <Badge variant={outcomeColors[info.getValue()] || 'default'} size="sm" dot>{info.getValue()}</Badge>,
     },
     {
       accessorKey: 'followUp',
@@ -114,6 +115,17 @@ const TreatmentTable = () => {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 5 } },
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading treatments...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-surface-200/60 shadow-card overflow-hidden">

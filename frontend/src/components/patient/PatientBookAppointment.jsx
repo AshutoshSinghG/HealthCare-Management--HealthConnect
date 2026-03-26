@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Calendar, Clock, MapPin, Star, ShieldCheck, ChevronRight,
-  Stethoscope, CreditCard, CheckCircle, X, Info
+  Stethoscope, CreditCard, CheckCircle, X, Info, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -10,28 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
-
-// ── Mock Data ──
-const mockDoctors = [
-  { id: 'D-101', name: 'Dr. Michael Chen', specialty: 'Cardiology', illness: ['Heart Attack', 'Hypertension', 'Chest Pain'], fee: 150, rating: 4.9, reviews: 124, exp: 12, hospital: 'City Central Hospital', img: 'MC' },
-  { id: 'D-102', name: 'Dr. Sarah Williams', specialty: 'Dermatology', illness: ['Acne', 'Skin Rash', 'Psoriasis'], fee: 120, rating: 4.7, reviews: 89, exp: 8, hospital: 'SkinCare Clinic', img: 'SW' },
-  { id: 'D-103', name: 'Dr. James Anderson', specialty: 'Neurology', illness: ['Migraine', 'Stroke', 'Epilepsy'], fee: 200, rating: 4.8, reviews: 156, exp: 15, hospital: 'Neuro Center', img: 'JA' },
-  { id: 'D-104', name: 'Dr. Emily Davis', specialty: 'Pediatrics', illness: ['Fever', 'Cough', 'Chickenpox'], fee: 100, rating: 4.9, reviews: 210, exp: 10, hospital: 'Childrens Hospital', img: 'ED' },
-  { id: 'D-105', name: 'Dr. Robert Wilson', specialty: 'General Medicine', illness: ['Fever', 'Cold', 'Flu', 'Headache'], fee: 80, rating: 4.6, reviews: 342, exp: 20, hospital: 'City Central Hospital', img: 'RW' },
-];
-
-const generateSlots = (dateStr) => [
-  { id: 's1', time: '09:00 AM', status: 'vacant' },
-  { id: 's2', time: '09:30 AM', status: 'booked' },
-  { id: 's3', time: '10:00 AM', status: 'vacant' },
-  { id: 's4', time: '10:30 AM', status: 'vacant' },
-  { id: 's5', time: '11:00 AM', status: 'booked' },
-  { id: 's6', time: '14:00 PM', status: 'vacant' },
-  { id: 's7', time: '14:30 PM', status: 'vacant' },
-  { id: 's8', time: '15:00 PM', status: 'vacant' },
-];
-
-const specialties = ['All', 'Cardiology', 'Dermatology', 'Neurology', 'Pediatrics', 'General Medicine'];
+import { usePublicDoctors, usePublicSpecialties, useDoctorSlots, useBookAppointment } from '../../hooks/usePatients';
 
 const PatientBookAppointment = () => {
   const navigate = useNavigate();
@@ -43,22 +22,18 @@ const PatientBookAppointment = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Derived
-  const filteredDoctors = useMemo(() => {
-    return mockDoctors.filter(d => {
-      const matchSpec = selectedSpecialty === 'All' || d.specialty === selectedSpecialty;
-      const term = searchTerm.toLowerCase();
-      const matchSearch = d.name.toLowerCase().includes(term) || 
-                          d.id.toLowerCase().includes(term) || 
-                          d.illness.some(i => i.toLowerCase().includes(term));
-      return matchSpec && matchSearch;
-    });
-  }, [searchTerm, selectedSpecialty]);
-
-  const currentSlots = useMemo(() => generateSlots(selectedDate), [selectedDate]);
+  // Data hooks
+  const { data: doctors = [], isLoading: loadingDoctors } = usePublicDoctors({
+    search: searchTerm || undefined,
+    specialty: selectedSpecialty !== 'All' ? selectedSpecialty : undefined,
+  });
+  const { data: specialties = ['All'] } = usePublicSpecialties();
+  const { data: currentSlots = [], isLoading: loadingSlots } = useDoctorSlots(
+    selectedDoctor?.id, selectedDate
+  );
+  const bookMutation = useBookAppointment();
 
   // Actions
   const handleSlotSelect = (slot) => {
@@ -70,20 +45,24 @@ const PatientBookAppointment = () => {
 
   const handlePayment = async (e) => {
     e.preventDefault();
-    setIsProcessing(true);
-    // Simulate network delay for payment
-    await new Promise(r => setTimeout(r, 1500));
-    setIsProcessing(false);
-    setPaymentSuccess(true);
-    
-    // Auto close after success
-    setTimeout(() => {
-      setPaymentModalOpen(false);
-      setSelectedDoctor(null);
-      setSelectedSlot(null);
-      toast.success('Appointment booked successfully!');
-      navigate('/patient/appointments'); // Redirect to my appointments
-    }, 2000);
+    try {
+      await bookMutation.mutateAsync({
+        slotId: selectedSlot.id,
+        reason: '',
+      });
+      setPaymentSuccess(true);
+      
+      // Auto close after success
+      setTimeout(() => {
+        setPaymentModalOpen(false);
+        setSelectedDoctor(null);
+        setSelectedSlot(null);
+        toast.success('Appointment booked successfully!');
+        navigate('/patient/appointments');
+      }, 2000);
+    } catch {
+      toast.error('Failed to book appointment');
+    }
   };
 
   return (
@@ -125,60 +104,70 @@ const PatientBookAppointment = () => {
             </Card>
 
             {/* Doctor List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDoctors.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-surface-500 bg-surface-50 rounded-2xl border border-surface-200">
-                  <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                  <p>No doctors found matching your criteria.</p>
-                </div>
-              ) : (
-                filteredDoctors.map((doc, idx) => (
-                  <motion.div key={doc.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-                    <Card hover className="h-full flex flex-col">
-                      <div className="flex items-start gap-4 mb-3">
-                        <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
-                          {doc.img}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-surface-800">{doc.name}</h3>
-                          <p className="text-xs text-primary-600 font-medium">{doc.specialty}</p>
-                          <div className="flex items-center gap-1 mt-1 text-xs text-surface-500">
-                            <Star className="w-3.5 h-3.5 text-warning-500 fill-warning-500" />
-                            <span className="font-medium text-surface-700">{doc.rating}</span>
-                            <span>({doc.reviews} reviews)</span>
+            {loadingDoctors ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {doctors.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-surface-500 bg-surface-50 rounded-2xl border border-surface-200">
+                    <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p>No doctors found matching your criteria.</p>
+                  </div>
+                ) : (
+                  doctors.map((doc, idx) => (
+                    <motion.div key={doc.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+                      <Card hover className="h-full flex flex-col">
+                        <div className="flex items-start gap-4 mb-3">
+                          <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center flex-shrink-0">
+                            {doc.img}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-surface-800">{doc.name}</h3>
+                            <p className="text-xs text-primary-600 font-medium">{doc.specialty}</p>
+                            <div className="flex items-center gap-1 mt-1 text-xs text-surface-500">
+                              <Star className="w-3.5 h-3.5 text-warning-500 fill-warning-500" />
+                              <span className="font-medium text-surface-700">{doc.rating}</span>
+                              <span>({doc.reviews} reviews)</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="space-y-2 mb-4 flex-1">
-                        <div className="flex items-center gap-2 text-xs text-surface-600">
-                          <MapPin className="w-4 h-4 text-surface-400" />
-                          <span>{doc.hospital}</span>
+                        
+                        <div className="space-y-2 mb-4 flex-1">
+                          <div className="flex items-center gap-2 text-xs text-surface-600">
+                            <MapPin className="w-4 h-4 text-surface-400" />
+                            <span>{doc.hospital || 'Not specified'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-surface-600">
+                            <ShieldCheck className="w-4 h-4 text-surface-400" />
+                            <span>{doc.exp} Years Experience</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-success-600 bg-success-50 px-2 py-1 rounded w-fit mt-2">
+                            Consultation Fee: ${doc.fee}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-surface-600">
-                          <ShieldCheck className="w-4 h-4 text-surface-400" />
-                          <span>{doc.exp} Years Experience</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-semibold text-success-600 bg-success-50 px-2 py-1 rounded w-fit mt-2">
-                          Consultation Fee: ${doc.fee}
-                        </div>
-                      </div>
 
-                      <div className="mt-auto pt-3 border-t border-surface-100">
-                        <p className="text-[10px] text-surface-400 mb-2 uppercase tracking-wide font-semibold">Treats exactly:</p>
-                        <div className="flex flex-wrap gap-1 mb-4">
-                          {doc.illness.slice(0, 3).map(i => (
-                            <span key={i} className="px-2 py-0.5 border border-surface-200 bg-surface-50 text-[10px] rounded-full text-surface-600">{i}</span>
-                          ))}
-                          {doc.illness.length > 3 && <span className="px-2 py-0.5 text-[10px] text-surface-400">+{doc.illness.length - 3} more</span>}
+                        <div className="mt-auto pt-3 border-t border-surface-100">
+                          {doc.illness && doc.illness.length > 0 && (
+                            <>
+                              <p className="text-[10px] text-surface-400 mb-2 uppercase tracking-wide font-semibold">Treats exactly:</p>
+                              <div className="flex flex-wrap gap-1 mb-4">
+                                {doc.illness.slice(0, 3).map(i => (
+                                  <span key={i} className="px-2 py-0.5 border border-surface-200 bg-surface-50 text-[10px] rounded-full text-surface-600">{i}</span>
+                                ))}
+                                {doc.illness.length > 3 && <span className="px-2 py-0.5 text-[10px] text-surface-400">+{doc.illness.length - 3} more</span>}
+                              </div>
+                            </>
+                          )}
+                          <Button className="w-full" onClick={() => setSelectedDoctor(doc)}>View Profile & Book</Button>
                         </div>
-                        <Button className="w-full" onClick={() => setSelectedDoctor(doc)}>View Profile & Book</Button>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))
-              )}
-            </div>
+                      </Card>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            )}
           </motion.div>
         ) : (
           <motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
@@ -217,14 +206,16 @@ const PatientBookAppointment = () => {
                   </div>
                 </Card>
                 
-                <Card>
-                  <h3 className="font-semibold text-surface-800 mb-3">Conditions Treated</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDoctor.illness.map(i => (
-                      <span key={i} className="px-2.5 py-1 bg-surface-100 text-xs font-medium text-surface-700 rounded-lg">{i}</span>
-                    ))}
-                  </div>
-                </Card>
+                {selectedDoctor.illness && selectedDoctor.illness.length > 0 && (
+                  <Card>
+                    <h3 className="font-semibold text-surface-800 mb-3">Conditions Treated</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedDoctor.illness.map(i => (
+                        <span key={i} className="px-2.5 py-1 bg-surface-100 text-xs font-medium text-surface-700 rounded-lg">{i}</span>
+                      ))}
+                    </div>
+                  </Card>
+                )}
               </div>
 
               {/* Slot Booking Area */}
@@ -253,27 +244,38 @@ const PatientBookAppointment = () => {
                   </div>
 
                   <h4 className="text-sm font-medium text-surface-700 mb-3">Available Timings</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {currentSlots.map((slot) => {
-                      const isBooked = slot.status === 'booked';
-                      return (
-                        <button
-                          key={slot.id}
-                          disabled={isBooked}
-                          onClick={() => handleSlotSelect(slot)}
-                          className={`p-3 rounded-xl border text-center transition-all ${
-                            isBooked 
-                              ? 'bg-surface-50 border-surface-200 text-surface-400 cursor-not-allowed opacity-60' 
-                              : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
-                          }`}
-                        >
-                          <Clock className={`w-4 h-4 mx-auto mb-1 ${isBooked ? 'text-surface-400' : 'text-success-600'}`} />
-                          <p className="text-sm font-bold">{slot.time}</p>
-                          <p className="text-[10px] uppercase font-bold mt-0.5 tracking-wider">{slot.status}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {loadingSlots ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
+                    </div>
+                  ) : currentSlots.length === 0 ? (
+                    <div className="text-center py-8 text-surface-400">
+                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No slots available for this date</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {currentSlots.map((slot) => {
+                        const isBooked = slot.status === 'booked';
+                        return (
+                          <button
+                            key={slot.id}
+                            disabled={isBooked}
+                            onClick={() => handleSlotSelect(slot)}
+                            className={`p-3 rounded-xl border text-center transition-all ${
+                              isBooked 
+                                ? 'bg-surface-50 border-surface-200 text-surface-400 cursor-not-allowed opacity-60' 
+                                : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
+                            }`}
+                          >
+                            <Clock className={`w-4 h-4 mx-auto mb-1 ${isBooked ? 'text-surface-400' : 'text-success-600'}`} />
+                            <p className="text-sm font-bold">{slot.time}</p>
+                            <p className="text-[10px] uppercase font-bold mt-0.5 tracking-wider">{slot.status}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>
@@ -282,7 +284,7 @@ const PatientBookAppointment = () => {
       </AnimatePresence>
 
       {/* Payment Modal */}
-      <Modal isOpen={paymentModalOpen} onClose={() => !isProcessing && !paymentSuccess && setPaymentModalOpen(false)} title="Confirm & Pay" size="md">
+      <Modal isOpen={paymentModalOpen} onClose={() => !bookMutation.isPending && !paymentSuccess && setPaymentModalOpen(false)} title="Confirm & Pay" size="md">
         {paymentSuccess ? (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
             <div className="w-16 h-16 rounded-full bg-success-100 text-success-500 mx-auto flex items-center justify-center mb-4">
@@ -313,20 +315,20 @@ const PatientBookAppointment = () => {
               </h4>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-surface-700">Cardholder Name</label>
-                <input required type="text" className="input-base" defaultValue="Sarah Johnson" />
+                <input required type="text" className="input-base" placeholder="Enter cardholder name" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-surface-700">Card Number</label>
-                <input required type="text" className="input-base" defaultValue="•••• •••• •••• 4242" maxLength={19} />
+                <input required type="text" className="input-base" placeholder="•••• •••• •••• ••••" maxLength={19} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-surface-700">Expiry (MM/YY)</label>
-                  <input required type="text" className="input-base" defaultValue="12/26" maxLength={5} />
+                  <input required type="text" className="input-base" placeholder="MM/YY" maxLength={5} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-surface-700">CVV</label>
-                  <input required type="password" className="input-base" defaultValue="123" maxLength={3} />
+                  <input required type="password" className="input-base" placeholder="•••" maxLength={3} />
                 </div>
               </div>
             </div>
@@ -337,9 +339,9 @@ const PatientBookAppointment = () => {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="ghost" className="flex-1" onClick={() => setPaymentModalOpen(false)} disabled={isProcessing}>Cancel</Button>
-              <Button type="submit" className="flex-1" loading={isProcessing}>
-                {isProcessing ? 'Processing...' : `Pay $${selectedDoctor?.fee} & Book`}
+              <Button type="button" variant="ghost" className="flex-1" onClick={() => setPaymentModalOpen(false)} disabled={bookMutation.isPending}>Cancel</Button>
+              <Button type="submit" className="flex-1" loading={bookMutation.isPending}>
+                {bookMutation.isPending ? 'Processing...' : `Pay $${selectedDoctor?.fee} & Book`}
               </Button>
             </div>
           </form>

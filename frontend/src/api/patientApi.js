@@ -39,3 +39,45 @@ export const exportExcel = async () => {
   const response = await api.get('/patients/me/export/excel', { responseType: 'blob' });
   return response.data;
 };
+
+// ─── Appointments ───
+
+export const getMyAppointments = async () => {
+  const { data } = await api.get('/appointments/me');
+  return data.data;
+};
+
+export const bookAppointment = async (payload) => {
+  const { data } = await api.post('/appointments/book', payload);
+  return data.data;
+};
+
+export const cancelAppointment = async (id) => {
+  const { data } = await api.patch(`/appointments/${id}/cancel`);
+  return data.data;
+};
+
+// ─── Medications ───
+
+export const getMyMedications = async () => {
+  const { data } = await api.get('/patients/me/medications');
+  return data.data;
+};
+
+// ─── Public Doctor Listing (for booking) ───
+
+export const getPublicDoctors = async (params) => {
+  const { data } = await api.get('/public/doctors', { params });
+  return data.data;
+};
+
+export const getPublicSpecialties = async () => {
+  const { data } = await api.get('/public/specialties');
+  return data.data;
+};
+
+export const getDoctorSlots = async (doctorId, date) => {
+  const { data } = await api.get(`/public/doctors/${doctorId}/slots`, { params: { date } });
+  return data.data;
+};
+
