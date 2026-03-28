@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Users, Calendar, AlertTriangle, Clock, TrendingUp, ArrowUpRight, Stethoscope, Bell, Mail, Phone, FileText, Pill, Edit, Loader2 } from 'lucide-react';
+import { Users, Calendar, AlertTriangle, Clock, TrendingUp, ArrowUpRight, Stethoscope, Bell, Mail, Phone, FileText, Pill, Edit, Loader2, CalendarCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PatientsBarChart, OutcomePieChart } from '../../components/charts/PatientStatsChart';
 import Card from '../../components/ui/Card';
@@ -36,10 +36,11 @@ const DoctorDashboard = () => {
     );
   }
 
-  const { profile, stats, recentPatients, pendingFollowups } = data;
+  const { profile, stats, recentPatients, pendingFollowups, todaysAppointments } = data;
   const doctorName = `Dr. ${profile.firstName} ${profile.lastName}`;
 
   const statCards = [
+    { label: 'Today\'s Appts', value: stats.todayAppointmentsCount || 0, icon: CalendarCheck, color: 'from-blue-500 to-blue-600' },
     { label: 'Total Patients', value: stats.totalPatients, icon: Users, color: 'from-primary-500 to-primary-600' },
     { label: 'Recent Visits', value: stats.recentVisits, icon: Calendar, color: 'from-success-500 to-success-600' },
     { label: 'Medicine Flags', value: stats.flaggedMedicines, icon: AlertTriangle, color: 'from-warning-500 to-warning-600' },
@@ -105,7 +106,7 @@ const DoctorDashboard = () => {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((stat, i) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="stat-card">
             <div className="flex items-start justify-between">
@@ -120,6 +121,62 @@ const DoctorDashboard = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Today's Appointments */}
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="section-title flex items-center gap-2">
+            <CalendarCheck className="w-5 h-5 text-blue-500" />
+            Today's Appointments
+          </h3>
+          <Badge variant="info" size="sm">{(todaysAppointments || []).length} Pending</Badge>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-surface-100">
+                <th className="table-header">Patient Name</th>
+                <th className="table-header">Diagnosis</th>
+                <th className="table-header">Timing</th>
+                <th className="table-header">Status</th>
+                <th className="table-header text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(todaysAppointments || []).length === 0 ? (
+                <tr><td colSpan={5} className="table-cell text-center text-surface-400 py-8">No appointments remaining for today</td></tr>
+              ) : (
+                todaysAppointments.map((appt) => (
+                  <tr key={appt.id} className="border-b border-surface-50 hover:bg-surface-50/50 transition-colors">
+                    <td className="table-cell">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+                          {(appt.patientName || 'Unknown').split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <span className="font-medium">{appt.patientName || 'Unknown'}</span>
+                      </div>
+                    </td>
+                    <td className="table-cell text-surface-600">{appt.diagnosis || 'New Patient'}</td>
+                    <td className="table-cell">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-surface-700">{appt.time}</span>
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <Badge variant="warning" size="sm" dot>{appt.status}</Badge>
+                    </td>
+                    <td className="table-cell text-right">
+                      <Link to={`/doctor/treatments/create?patientId=${appt.patientId || ''}`}>
+                        <Button variant="outline" size="sm" className="text-xs py-1 h-7">Treat</Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -46,6 +46,7 @@ const getPatients = async (userId, query) => {
 
   const [patients, total] = await Promise.all([
     Patient.find({ _id: { $in: patientIdArray } })
+      .populate('userId', 'email')
       .skip(skip)
       .limit(Number(limit)),
     Patient.countDocuments({ _id: { $in: patientIdArray } }),
@@ -73,7 +74,7 @@ const getPatientDetail = async (userId, patientId) => {
     throw err;
   }
 
-  const patient = await Patient.findById(patientId);
+  const patient = await Patient.findById(patientId).populate('userId', 'email');
   if (!patient) {
     const err = new Error('Patient not found');
     err.statusCode = 404;
@@ -82,8 +83,8 @@ const getPatientDetail = async (userId, patientId) => {
 
   const treatments = await Treatment.find({
     patientId: patient._id,
-    doctorId: doctor._id,
   })
+    .populate('doctorId', 'userId firstName lastName')
     .sort({ visitDate: -1 })
     .limit(50);
 
@@ -104,7 +105,10 @@ const getPatientDetail = async (userId, patientId) => {
     medications: medicationMap[t._id.toString()] || [],
   }));
 
-  return { patient, treatments: treatmentsWithMeds };
+  const unsuitableMedicinesList = await require('../models/UnsuitableMedicine').find({ patientId: patient._id, isActive: true })
+    .populate('flaggedByDoctorId', 'userId firstName lastName');
+
+  return { patient, treatments: treatmentsWithMeds, unsuitableMedicines: unsuitableMedicinesList };
 };
 
 /**
@@ -166,6 +170,51 @@ const getDashboard = async (userId) => {
     .sort({ followUpDate: 1 })
     .limit(5);
 
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  
+  // Find today's slots that are booked or pending
+  const todaySlots = await require('../models/DoctorSlot').find({
+    doctorId: doctor._id,
+    date: todayStr,
+    status: { $in: ['booked', 'pending'] },
+    patientId: { $ne: '' }
+  }).sort({ from: 1 });
+
+  // Find treatments created today for this doctor
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+  
+  const todayTreatments = await Treatment.find({
+    doctorId: doctor._id,
+    visitDate: { $gte: startOfDay, $lte: endOfDay }
+  });
+
+  const treatedPatientIds = todayTreatments.map(t => t.patientId.toString());
+
+  // Filter out slots whose patient already has a treatment today
+  const pendingAppointments = todaySlots.filter(
+    slot => !treatedPatientIds.includes(slot.patientId.toString())
+  );
+
+  const todaysAppointments = await Promise.all(pendingAppointments.map(async (slot) => {
+    // Fetch the latest diagnosis from past treatments for this patient by this doctor
+    const lastTreatment = await Treatment.findOne({
+      patientId: slot.patientId,
+      doctorId: doctor._id,
+    }).sort({ visitDate: -1 });
+
+    return {
+      id: slot._id,
+      patientName: slot.patient,
+      diagnosis: lastTreatment ? lastTreatment.diagnosis : 'New Patient',
+      reason: slot.reason, // Optionally keep reason if frontend still wants it as fallback
+      time: `${slot.from} - ${slot.to}`,
+      status: 'Pending',
+      patientId: slot.patientId
+    };
+  }));
+
   return {
     profile: doctor,
     stats: {
@@ -173,9 +222,11 @@ const getDashboard = async (userId) => {
       recentVisits: recentVisitsCount,
       flaggedMedicines,
       followupsRequired: followUps,
+      todayAppointmentsCount: pendingAppointments.length,
     },
     recentPatients: recentPatientsWithTreatment,
     pendingFollowups,
+    todaysAppointments,
   };
 };
 

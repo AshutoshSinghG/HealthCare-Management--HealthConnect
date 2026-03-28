@@ -9,21 +9,23 @@ import Modal from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatDate';
 import toast from 'react-hot-toast';
 import { usePatientDetail, useFlagUnsuitableMedicine, useRemoveUnsuitableFlag } from '../../hooks/useDoctors';
+import { useAuth } from '../../hooks/useAuth';
 
 const outcomeColors = { improved: 'success', recovered: 'success', stable: 'warning', worsened: 'danger' };
-const severityColors = { critical: 'danger', high: 'warning', medium: 'info', low: 'default' };
+const severityColors = { CRITICAL: 'danger', HIGH: 'warning', MODERATE: 'info', LOW: 'default' };
 const tabs = ['Treatment History', 'Medications', 'Unsuitable Medicines'];
 
 const PatientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: detail, isLoading, isError } = usePatientDetail(id);
   const flagMutation = useFlagUnsuitableMedicine();
   const removeFlagMutation = useRemoveUnsuitableFlag();
   const [activeTab, setActiveTab] = useState(0);
-  const [deleteModal, setDeleteModal] = useState(null);
   const [flagModal, setFlagModal] = useState(false);
-  const [newFlag, setNewFlag] = useState({ name: '', reason: '', severity: 'medium' });
+  const [viewModal, setViewModal] = useState(null);
+  const [newFlag, setNewFlag] = useState({ name: '', reason: '', severity: 'MODERATE' });
 
   const patient = useMemo(() => {
     if (!detail?.patient) return null;
@@ -31,15 +33,19 @@ const PatientDetail = () => {
     return {
       id: p._id,
       name: `${p.firstName} ${p.lastName}`,
-      email: p.contactEmail || '',
-      phone: p.contactPhone || '',
+      email: p.userId?.email || '',
+      phone: p.phoneNumber || '',
       dob: p.dateOfBirth || '',
       age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth)) / 31557600000) : 0,
       bloodGroup: p.bloodGroup || '',
       gender: p.gender || '',
-      allergies: p.allergies || [],
+      allergies: p.knownAllergies || [],
       chronicConditions: p.chronicConditions || [],
-      emergencyContact: p.emergencyContact || { name: 'N/A', phone: '', relation: '' },
+      emergencyContact: {
+        name: p.emergencyContactName || 'N/A',
+        phone: p.emergencyContactPhone || 'N/A',
+        relation: ''
+      },
     };
   }, [detail]);
 
@@ -50,7 +56,8 @@ const PatientDetail = () => {
       date: t.visitDate,
       diagnosis: t.diagnosis,
       outcome: t.outcomeStatus?.toLowerCase() || 'stable',
-      doctor: t.doctorName || 'Doctor',
+      doctor: t.doctorId ? `Dr. ${t.doctorId.firstName} ${t.doctorId.lastName}` : 'Unknown',
+      doctorId: t.doctorId ? t.doctorId.userId : null,
       icdCode: t.icdCode || '',
       treatmentPlan: t.treatmentPlan || '',
       followUp: t.followUpDate || null,
@@ -73,15 +80,20 @@ const PatientDetail = () => {
     })));
   }, [treatments]);
 
-  const unsuitableMeds = detail?.unsuitableMedicines || [];
+  const unsuitableMeds = useMemo(() => {
+    if (!detail?.unsuitableMedicines) return [];
+    return detail.unsuitableMedicines.map(m => ({
+      id: m._id,
+      name: m.medicineName,
+      severity: m.severity,
+      reason: m.reason,
+      flaggedBy: m.flaggedByDoctorId ? `Dr. ${m.flaggedByDoctorId.firstName} ${m.flaggedByDoctorId.lastName}` : 'Unknown',
+      flaggedByDoctorId: m.flaggedByDoctorId?.userId || m.flaggedByDoctorId?._id,
+      flagDate: m.createdAt
+    }));
+  }, [detail]);
   const visibleTreatments = treatments.filter(t => !t.isDeleted);
-  const CURRENT_DOCTOR = 'Dr. Chen';
-
-  const handleSoftDelete = (treatmentId) => {
-    // Note: This would call an API in full implementation
-    setDeleteModal(null);
-    toast.success('Treatment record archived (soft deleted)');
-  };
+  const CURRENT_DOCTOR_ID = user?.id; // For ownership checks
 
   const handleFlagMedicine = async () => {
     if (!newFlag.name || !newFlag.reason) {
@@ -90,17 +102,13 @@ const PatientDetail = () => {
     }
     try {
       await flagMutation.mutateAsync({ patientId: id, medicineName: newFlag.name, reason: newFlag.reason, severity: newFlag.severity });
-      setNewFlag({ name: '', reason: '', severity: 'medium' });
+      setNewFlag({ name: '', reason: '', severity: 'MODERATE' });
       setFlagModal(false);
       toast.success('Medicine flagged as unsuitable');
     } catch { toast.error('Failed to flag medicine'); }
   };
 
-  const handleRemoveFlag = async (medId, flaggedBy) => {
-    if (flaggedBy !== CURRENT_DOCTOR) {
-      toast.error('You can only remove your own flagged medicines');
-      return;
-    }
+  const handleRemoveFlag = async (medId) => {
     try {
       await removeFlagMutation.mutateAsync(medId);
       toast.success('Medicine flag removed');
@@ -140,6 +148,13 @@ const PatientDetail = () => {
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Age / Gender</p>
                 <p className="text-sm text-surface-700">{patient.age} yrs · {patient.gender}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-surface-400 uppercase">Contact</p>
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                  <span className="text-sm text-surface-700">{patient.phone || 'N/A'}</span>
+                  <span className="text-xs text-surface-500">{patient.email || 'N/A'}</span>
+                </div>
               </div>
               <div>
                 <p className="text-xs font-medium text-surface-400 uppercase">Blood Group</p>
@@ -213,7 +228,7 @@ const PatientDetail = () => {
                 </thead>
                 <tbody>
                   {visibleTreatments.map(t => {
-                    const isOwn = t.doctor === CURRENT_DOCTOR;
+                    const isOwn = t.doctorId === CURRENT_DOCTOR_ID;
                     return (
                       <tr key={t.id} className="border-b border-surface-50 hover:bg-surface-50/50 transition-colors">
                         <td className="table-cell font-medium">{formatDate(t.date)}</td>
@@ -233,20 +248,11 @@ const PatientDetail = () => {
                         <td className="table-cell text-sm">{t.followUp ? formatDate(t.followUp) : '—'}</td>
                         <td className="table-cell text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {isOwn ? (
-                              <>
-                                <Link to={`/doctor/treatments/edit/${t.id}`}>
-                                  <Button variant="ghost" size="sm" icon={Edit}>Edit</Button>
-                                </Link>
-                                <Button variant="ghost" size="sm" icon={Trash2} className="text-danger-500 hover:text-danger-600" onClick={() => setDeleteModal(t.id)}>
-                                  Delete
-                                </Button>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-1 text-xs text-surface-400">
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>View Only</span>
-                              </div>
+                            <Button variant="ghost" size="sm" icon={Eye} onClick={() => setViewModal(t)}>View</Button>
+                            {isOwn && (
+                              <Link to={`/doctor/treatments/edit/${t.id}`}>
+                                <Button variant="ghost" size="sm" icon={Edit}>Edit</Button>
+                              </Link>
                             )}
                           </div>
                         </td>
@@ -256,7 +262,7 @@ const PatientDetail = () => {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-xs text-surface-400 italic">💡 You can only edit/delete treatments you created. Other doctors' records are view-only.</p>
+            <p className="mt-3 text-xs text-surface-400 italic">💡 You can only edit treatments you created. Other doctors' records are view-only.</p>
           </Card>
         )}
 
@@ -302,9 +308,12 @@ const PatientDetail = () => {
               </Button>
             </div>
             <div className="space-y-3">
-              {unsuitableMeds.map((med) => {
-                const isOwn = med.flaggedBy === CURRENT_DOCTOR;
-                return (
+              {unsuitableMeds.length === 0 ? (
+                <Card>
+                  <p className="text-center text-surface-400 py-8">No unsuitable medicines found.</p>
+                </Card>
+              ) : (
+                unsuitableMeds.map((med) => (
                   <Card key={med.id} hover>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -318,37 +327,73 @@ const PatientDetail = () => {
                           <span>{formatDate(med.flagDate)}</span>
                         </div>
                       </div>
-                      {isOwn && (
-                        <Button variant="ghost" size="sm" className="text-danger-500" onClick={() => handleRemoveFlag(med.id, med.flaggedBy)}>
+                      {med.flaggedByDoctorId === CURRENT_DOCTOR_ID && (
+                        <Button variant="ghost" size="sm" className="text-danger-500" onClick={() => handleRemoveFlag(med.id)}>
                           <X className="w-4 h-4 mr-1" /> Remove
                         </Button>
                       )}
                     </div>
                   </Card>
-                );
-              })}
+                ))
+              )}
             </div>
             <p className="text-xs text-surface-400 italic">💡 You can only remove medicines you flagged. Other doctors' flags are protected.</p>
           </div>
         )}
       </motion.div>
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={!!deleteModal} onClose={() => setDeleteModal(null)} title="Archive Treatment Record" size="sm">
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 p-3 bg-warning-50 rounded-xl border border-warning-100">
-            <AlertTriangle className="w-5 h-5 text-warning-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-warning-800">Soft Delete</p>
-              <p className="text-xs text-warning-700 mt-0.5">This record will be archived (marked as deleted), not permanently removed. It can be restored by an admin if needed.</p>
+      {/* View Treatment Modal */}
+      {viewModal && (
+        <Modal isOpen={!!viewModal} onClose={() => setViewModal(null)} title="Treatment Details" size="lg">
+          <div className="space-y-6 text-surface-800">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-semibold text-surface-400 uppercase">Diagnosis / ICD Code</p>
+                <p className="font-semibold text-primary-600">{viewModal.diagnosis}</p>
+                <p className="text-sm text-surface-500">{viewModal.icdCode || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-surface-400 uppercase">Attending Doctor</p>
+                <p className="font-semibold text-surface-800">{viewModal.doctor}</p>
+                <p className="text-sm text-surface-500">{formatDate(viewModal.date)}</p>
+              </div>
+            </div>
+            
+            <div className="bg-surface-50 p-4 rounded-xl border border-surface-200">
+              <p className="text-xs font-semibold text-surface-400 uppercase mb-2">Treatment Plan / Notes</p>
+              <p className="text-sm text-surface-700 whitespace-pre-wrap">{viewModal.treatmentPlan || viewModal.notes || 'No treatment notes recorded.'}</p>
+            </div>
+
+            {viewModal.medications?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-surface-400 uppercase mb-3">Prescribed Medications</p>
+                <div className="space-y-2">
+                  {viewModal.medications.map((m, i) => (
+                    <div key={i} className="flex justify-between items-center bg-white border border-surface-100 p-3 rounded-lg">
+                      <div className="flex gap-2 items-center">
+                        <Pill className="text-primary-500 w-4 h-4" />
+                        <span className="font-medium text-sm">{m.medicineName || m.name}</span>
+                      </div>
+                      <span className="text-xs text-surface-500">{m.dosage} - {m.frequency}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-4 border-t border-surface-100">
+              <div>
+                <p className="text-xs font-semibold text-surface-400 uppercase">Outcome Status</p>
+                <Badge variant={outcomeColors[viewModal.outcome] || 'default'}>{viewModal.outcome}</Badge>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-semibold text-surface-400 uppercase">Follow-up Date</p>
+                <p className="text-sm font-medium">{viewModal.followUp ? formatDate(viewModal.followUp) : 'Not required'}</p>
+              </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setDeleteModal(null)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleSoftDelete(deleteModal)} icon={Trash2}>Archive Record</Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
       {/* Flag Medicine Modal */}
       <Modal isOpen={flagModal} onClose={() => setFlagModal(false)} title="Flag Unsuitable Medicine" size="md">
@@ -364,10 +409,10 @@ const PatientDetail = () => {
           <div>
             <label className="block text-sm font-medium text-surface-700 mb-1">Severity</label>
             <div className="flex gap-2">
-              {['low', 'medium', 'high', 'critical'].map(s => (
+              {['LOW', 'MODERATE', 'HIGH', 'CRITICAL'].map(s => (
                 <button key={s} onClick={() => setNewFlag(p => ({ ...p, severity: s }))}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${newFlag.severity === s ? 'bg-primary-500 text-white' : 'bg-surface-50 text-surface-600 border border-surface-200 hover:bg-surface-100'}`}
-                >{s}</button>
+                >{s.toLowerCase()}</button>
               ))}
             </div>
           </div>

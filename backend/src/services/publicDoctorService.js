@@ -64,6 +64,8 @@ const listDoctors = async (query) => {
       reviews: 0,
       exp: doc.yearsOfExperience || 0,
       hospital: doc.department || '',
+      education: doc.qualifications || '',
+      bio: doc.bio || '',
       img: `${doc.firstName?.[0] || ''}${doc.lastName?.[0] || ''}`,
     };
   });

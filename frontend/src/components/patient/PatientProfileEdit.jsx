@@ -28,16 +28,20 @@ const PatientProfileEdit = () => {
         dob: profile.dateOfBirth ? new Date(profile.dateOfBirth).toISOString().split('T')[0] : '',
         gender: profile.gender || 'Male',
         bloodGroup: profile.bloodGroup || 'O+',
-        address: profile.address
-          ? [profile.address.street, profile.address.city, profile.address.state, profile.address.zipCode, profile.address.country].filter(Boolean).join(', ')
-          : '',
+        address: {
+          street: profile.address?.street || '',
+          city: profile.address?.city || '',
+          state: profile.address?.state || '',
+          zipCode: profile.address?.zipCode || '',
+          country: profile.address?.country || '',
+        },
         allergies: profile.knownAllergies || [],
         chronicConditions: profile.chronicConditions || [],
         emergencyContact: {
           name: profile.emergencyContactName || '',
-          relation: 'Spouse',
+          relation: profile.emergencyContactRelation || '',
           phone: profile.emergencyContactPhone || '',
-          address: '',
+          address: profile.emergencyContactAddress || '',
         },
       });
     }
@@ -55,6 +59,7 @@ const PatientProfileEdit = () => {
   }
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const updateAddress = (field, value) => setForm(prev => ({ ...prev, address: { ...prev.address, [field]: value } }));
   const updateEmergency = (field, value) => setForm(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, [field]: value } }));
 
   const addAllergy = () => {
@@ -87,8 +92,11 @@ const PatientProfileEdit = () => {
       bloodGroup: form.bloodGroup,
       knownAllergies: form.allergies,
       chronicConditions: form.chronicConditions,
+      address: form.address,
       emergencyContactName: form.emergencyContact.name,
+      emergencyContactRelation: form.emergencyContact.relation,
       emergencyContactPhone: form.emergencyContact.phone,
+      emergencyContactAddress: form.emergencyContact.address,
     };
 
     try {
@@ -171,9 +179,27 @@ const PatientProfileEdit = () => {
                 {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
               </select>
             </div>
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Address</label>
-              <input value={form.address} onChange={e => update('address', e.target.value)} className="input-base" />
+            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-sm font-medium text-surface-700">Street Address</label>
+                <input value={form.address.street} onChange={e => updateAddress('street', e.target.value)} className="input-base" placeholder="123 Main St" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-surface-700">City</label>
+                <input value={form.address.city} onChange={e => updateAddress('city', e.target.value)} className="input-base" placeholder="City" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-surface-700">State / Province</label>
+                <input value={form.address.state} onChange={e => updateAddress('state', e.target.value)} className="input-base" placeholder="State" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-surface-700">Zip / Postal Code</label>
+                <input value={form.address.zipCode} onChange={e => updateAddress('zipCode', e.target.value)} className="input-base" placeholder="Zip Code" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-surface-700">Country</label>
+                <input value={form.address.country} onChange={e => updateAddress('country', e.target.value)} className="input-base" placeholder="Country" />
+              </div>
             </div>
           </div>
         </Card>

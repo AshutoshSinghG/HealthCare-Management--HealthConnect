@@ -26,10 +26,10 @@ const PatientList = () => {
     return (Array.isArray(list) ? list : []).map(p => ({
       id: p._id,
       name: `${p.firstName} ${p.lastName}`,
-      email: p.contactEmail || '',
+      email: p.userId?.email || '',
       bloodGroup: p.bloodGroup || '',
       dob: p.dateOfBirth || '',
-      phone: p.contactPhone || '',
+      phone: p.phoneNumber || '',
       status: p.lastTreatment?.outcomeStatus?.toLowerCase() || 'active',
       lastVisit: p.lastTreatment?.visitDate || '',
       conditions: p.chronicConditions || [],

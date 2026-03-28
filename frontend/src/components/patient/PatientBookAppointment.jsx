@@ -16,11 +16,11 @@ const PatientBookAppointment = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
-  
+
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  
+
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
@@ -51,7 +51,7 @@ const PatientBookAppointment = () => {
         reason: '',
       });
       setPaymentSuccess(true);
-      
+
       // Auto close after success
       setTimeout(() => {
         setPaymentModalOpen(false);
@@ -75,23 +75,23 @@ const PatientBookAppointment = () => {
       <AnimatePresence mode="wait">
         {!selectedDoctor ? (
           <motion.div key="search" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-            
+
             {/* Search Filters */}
             <Card>
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 w-5 h-5" />
-                  <input 
-                    type="text" 
-                    placeholder="Search by doctor name, ID, or illness (e.g., Fever, Heart)..." 
+                  <input
+                    type="text"
+                    placeholder="Search by doctor name, ID, or illness (e.g., Fever, Heart)..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="input-base pl-10 w-full"
                   />
                 </div>
                 <div className="w-full md:w-64">
-                  <select 
-                    value={selectedSpecialty} 
+                  <select
+                    value={selectedSpecialty}
                     onChange={(e) => setSelectedSpecialty(e.target.value)}
                     className="input-base w-full"
                   >
@@ -133,7 +133,7 @@ const PatientBookAppointment = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-2 mb-4 flex-1">
                           <div className="flex items-center gap-2 text-xs text-surface-600">
                             <MapPin className="w-4 h-4 text-surface-400" />
@@ -174,7 +174,7 @@ const PatientBookAppointment = () => {
             <button onClick={() => setSelectedDoctor(null)} className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 mb-4">
               <ChevronRight className="w-4 h-4 rotate-180" /> Back to Search
             </button>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Doctor Profile Sidebar */}
               <div className="lg:col-span-1 space-y-6">
@@ -184,28 +184,42 @@ const PatientBookAppointment = () => {
                       {selectedDoctor.img}
                     </div>
                     <h2 className="text-xl font-bold text-surface-800">{selectedDoctor.name}</h2>
-                    <p className="text-primary-600 font-medium">{selectedDoctor.specialty}</p>
-                    <p className="text-sm text-surface-500 mt-1">{selectedDoctor.hospital}</p>
-                  </div>
-                  
-                  <div className="py-4 space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-surface-500">Experience</span>
-                      <span className="font-medium text-surface-800">{selectedDoctor.exp} Years</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-surface-500">Rating</span>
+                    <p className="text-sm text-surface-800 font-medium">{selectedDoctor.education}</p>
+                    <div className="flex items-center justify-center text-sm">
+                      <span className="text-surface-500">Rating -</span>
                       <span className="font-medium text-surface-800 flex items-center gap-1">
                         <Star className="w-3.5 h-3.5 text-warning-500 fill-warning-500" /> {selectedDoctor.rating}
                       </span>
                     </div>
+                  </div>
+
+                  <div className="py-4 space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-surface-500">Specialty</span>
+                      <p className="text-primary-600 font-medium">{selectedDoctor.specialty}</p>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-surface-500">Department</span>
+                      <p className="text-sm text-surface-500 mt-1">{selectedDoctor.hospital}</p>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-surface-500">Experience</span>
+                      <span className="font-medium text-surface-800">{selectedDoctor.exp} Years</span>
+                    </div>
                     <div className="flex justify-between text-sm border-t border-surface-100 pt-3">
                       <span className="text-surface-500">Consultation Fee</span>
-                      <span className="font-bold text-success-600 text-lg">${selectedDoctor.fee}</span>
+                      <span className="font-bold text-success-600 text-lg">₹{selectedDoctor.fee}</span>
                     </div>
                   </div>
+
+                  {selectedDoctor.bio && (
+                    <div className="pt-4 border-t border-surface-100">
+                      <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2">About</h3>
+                      <p className="text-sm text-surface-600 leading-relaxed whitespace-pre-wrap">{selectedDoctor.bio}</p>
+                    </div>
+                  )}
                 </Card>
-                
+
                 {selectedDoctor.illness && selectedDoctor.illness.length > 0 && (
                   <Card>
                     <h3 className="font-semibold text-surface-800 mb-3">Conditions Treated</h3>
@@ -225,12 +239,12 @@ const PatientBookAppointment = () => {
                     <Calendar className="w-5 h-5 text-primary-500" />
                     Select Appointment Slot
                   </h3>
-                  
+
                   <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-primary-50 rounded-xl border border-primary-100">
                     <div className="space-y-1 w-full sm:w-auto">
                       <label className="text-xs font-bold text-primary-700 uppercase tracking-wider">Select Date</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
@@ -262,11 +276,10 @@ const PatientBookAppointment = () => {
                             key={slot.id}
                             disabled={isBooked}
                             onClick={() => handleSlotSelect(slot)}
-                            className={`p-3 rounded-xl border text-center transition-all ${
-                              isBooked 
-                                ? 'bg-surface-50 border-surface-200 text-surface-400 cursor-not-allowed opacity-60' 
-                                : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
-                            }`}
+                            className={`p-3 rounded-xl border text-center transition-all ${isBooked
+                              ? 'bg-surface-50 border-surface-200 text-surface-400 cursor-not-allowed opacity-60'
+                              : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
+                              }`}
                           >
                             <Clock className={`w-4 h-4 mx-auto mb-1 ${isBooked ? 'text-surface-400' : 'text-success-600'}`} />
                             <p className="text-sm font-bold">{slot.time}</p>

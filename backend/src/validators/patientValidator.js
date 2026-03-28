@@ -15,7 +15,9 @@ const updatePatientSchema = Joi.object({
     country: Joi.string().allow('').optional(),
   }).optional(),
   emergencyContactName: Joi.string().allow('').optional(),
+  emergencyContactRelation: Joi.string().allow('').optional(),
   emergencyContactPhone: Joi.string().allow('').optional(),
+  emergencyContactAddress: Joi.string().allow('').optional(),
   chronicConditions: Joi.array().items(Joi.string()).optional(),
   knownAllergies: Joi.array().items(Joi.string()).optional(),
 }).min(1);

@@ -48,7 +48,15 @@ const patientSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    emergencyContactRelation: {
+      type: String,
+      default: '',
+    },
     emergencyContactPhone: {
+      type: String,
+      default: '',
+    },
+    emergencyContactAddress: {
       type: String,
       default: '',
     },

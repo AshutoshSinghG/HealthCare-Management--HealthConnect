@@ -111,6 +111,12 @@ const PatientDashboard = () => {
                       <span>{profile.phoneNumber}</span>
                     </div>
                   )}
+                  {addressStr && (
+                    <div className="flex items-center gap-1.5 text-sm text-surface-600 mt-1 w-full">
+                      <MapPin className="w-4 h-4 text-surface-400" />
+                      <span className="truncate">{addressStr}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {(profile.knownAllergies || []).map((a, i) => <Badge key={i} variant="danger" size="sm">⚠ {a}</Badge>)}
@@ -128,17 +134,22 @@ const PatientDashboard = () => {
                   </div>
                   <h4 className="text-xs font-semibold text-surface-500 uppercase tracking-wider">Emergency Contact</h4>
                 </div>
-                <p className="text-sm font-semibold text-surface-800">{profile.emergencyContactName}</p>
+                <p className="text-sm font-semibold text-surface-800">
+                  {profile.emergencyContactName}
+                  {profile.emergencyContactRelation && (
+                    <span className="text-xs font-normal text-surface-500 ml-1.5">({profile.emergencyContactRelation})</span>
+                  )}
+                </p>
                 {profile.emergencyContactPhone && (
                   <div className="flex items-center gap-1.5 mt-2 text-sm text-surface-600">
                     <Phone className="w-3.5 h-3.5 text-surface-400" />
                     <span>{profile.emergencyContactPhone}</span>
                   </div>
                 )}
-                {addressStr && (
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-surface-500">
-                    <MapPin className="w-3.5 h-3.5 text-surface-400" />
-                    <span className="truncate">{addressStr}</span>
+                {profile.emergencyContactAddress && (
+                  <div className="flex items-start gap-1.5 mt-1.5 text-xs text-surface-500">
+                    <MapPin className="w-3.5 h-3.5 text-surface-400 mt-0.5 flex-shrink-0" />
+                    <span className="leading-tight">{profile.emergencyContactAddress}</span>
                   </div>
                 )}
               </div>
