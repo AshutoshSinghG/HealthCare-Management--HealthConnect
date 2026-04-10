@@ -1,27 +1,21 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Search, Trash2, Eye, Shield, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Search, Trash2, Eye, Shield, ShieldAlert, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
-
-const initialMedicines = [
-  { id: 1, patient: 'Sarah Johnson', patientId: 'P-1001', medicine: 'Aspirin', reason: 'History of GI bleeding', severity: 'high', flaggedBy: 'Dr. Michael Chen', flagDate: '2026-01-15' },
-  { id: 2, patient: 'Sarah Johnson', patientId: 'P-1001', medicine: 'Penicillin', reason: 'Severe allergic reaction (anaphylaxis)', severity: 'critical', flaggedBy: 'Dr. Sarah Wilson', flagDate: '2025-11-20' },
-  { id: 3, patient: 'Robert Williams', patientId: 'P-1002', medicine: 'Metformin', reason: 'Potential interaction with kidney medication', severity: 'medium', flaggedBy: 'Dr. James Park', flagDate: '2026-02-10' },
-  { id: 4, patient: 'Emily Davis', patientId: 'P-1003', medicine: 'Codeine', reason: 'Ultra-rapid metabolizer — respiratory depression risk', severity: 'high', flaggedBy: 'Dr. Priya Sharma', flagDate: '2025-09-05' },
-  { id: 5, patient: 'James Brown', patientId: 'P-1004', medicine: 'Ibuprofen', reason: 'NSAID contraindicated with blood thinners', severity: 'medium', flaggedBy: 'Dr. Michael Chen', flagDate: '2026-02-25' },
-  { id: 6, patient: 'David Wilson', patientId: 'P-1006', medicine: 'ACE Inhibitors', reason: 'Severe cough side effect documented', severity: 'low', flaggedBy: 'Dr. Sarah Wilson', flagDate: '2026-01-10' },
-];
+import { useAdminMedicines, useRemoveMedicineFlag } from '../../hooks/useAdmin';
 
 const severityColors = { critical: 'danger', high: 'warning', medium: 'info', low: 'default' };
 const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
 
 const MedicineControl = () => {
-  const [medicines, setMedicines] = useState(initialMedicines);
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
+
+  const { data: medicines = [], isLoading } = useAdminMedicines();
+  const removeMutation = useRemoveMedicineFlag();
 
   const filtered = medicines
     .filter(m => {
@@ -34,9 +28,11 @@ const MedicineControl = () => {
     })
     .sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
-  const removeFlag = (id) => {
-    setMedicines(prev => prev.filter(m => m.id !== id));
-    toast.success('Medicine flag removed by admin');
+  const removeFlag = async (id) => {
+    try {
+      await removeMutation.mutateAsync(id);
+      toast.success('Medicine flag removed by admin');
+    } catch { toast.error('Failed to remove flag'); }
   };
 
   const stats = {
@@ -45,6 +41,17 @@ const MedicineControl = () => {
     high: medicines.filter(m => m.severity === 'high').length,
     medium: medicines.filter(m => m.severity === 'medium').length,
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading medicine flags...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -85,32 +92,36 @@ const MedicineControl = () => {
       </div>
 
       <div className="space-y-3">
-        {filtered.map((med, i) => (
-          <motion.div key={med.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card hover>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${med.severity === 'critical' ? 'bg-danger-50 border border-danger-200' : med.severity === 'high' ? 'bg-warning-50 border border-warning-200' : 'bg-primary-50 border border-primary-200'}`}>
-                    <ShieldAlert className={`w-5 h-5 ${med.severity === 'critical' ? 'text-danger-500' : med.severity === 'high' ? 'text-warning-500' : 'text-primary-500'}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-surface-800">{med.medicine}</p>
-                      <Badge variant={severityColors[med.severity]} size="sm">{med.severity}</Badge>
+        {filtered.length === 0 ? (
+          <Card><p className="text-center text-surface-400 py-8">No medicine flags found.</p></Card>
+        ) : (
+          filtered.map((med, i) => (
+            <motion.div key={med.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+              <Card hover>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${med.severity === 'critical' ? 'bg-danger-50 border border-danger-200' : med.severity === 'high' ? 'bg-warning-50 border border-warning-200' : 'bg-primary-50 border border-primary-200'}`}>
+                      <ShieldAlert className={`w-5 h-5 ${med.severity === 'critical' ? 'text-danger-500' : med.severity === 'high' ? 'text-warning-500' : 'text-primary-500'}`} />
                     </div>
-                    <p className="text-sm text-surface-600 mt-1">{med.reason}</p>
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-surface-500">
-                      <span>Patient: <strong className="text-surface-700">{med.patient}</strong> ({med.patientId})</span>
-                      <span>Flagged by: <strong className="text-surface-700">{med.flaggedBy}</strong></span>
-                      <span>{med.flagDate}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-surface-800">{med.medicine}</p>
+                        <Badge variant={severityColors[med.severity]} size="sm">{med.severity}</Badge>
+                      </div>
+                      <p className="text-sm text-surface-600 mt-1">{med.reason}</p>
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-surface-500">
+                        <span>Patient: <strong className="text-surface-700">{med.patient}</strong> ({med.patientId})</span>
+                        <span>Flagged by: <strong className="text-surface-700">{med.flaggedBy}</strong></span>
+                        <span>{med.flagDate}</span>
+                      </div>
                     </div>
                   </div>
+                  <Button variant="ghost" size="sm" icon={Trash2} className="text-danger-500 flex-shrink-0" onClick={() => removeFlag(med.id)}>Remove Flag</Button>
                 </div>
-                <Button variant="ghost" size="sm" icon={Trash2} className="text-danger-500 flex-shrink-0" onClick={() => removeFlag(med.id)}>Remove Flag</Button>
-              </div>
-            </Card>
-          </motion.div>
-        ))}
+              </Card>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );

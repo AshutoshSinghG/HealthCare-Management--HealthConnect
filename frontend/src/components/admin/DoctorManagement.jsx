@@ -1,28 +1,24 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Stethoscope, Search, Plus, Edit, Trash2, Eye, Mail, Phone, Award } from 'lucide-react';
+import { Stethoscope, Search, Plus, Edit, Trash2, Eye, Mail, Phone, Award, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
-
-const initialDoctors = [
-  { id: 1, name: 'Dr. Michael Chen', email: 'dr.chen@health.com', phone: '+1-555-2001', specialty: 'General Medicine', department: 'Internal Medicine', qualifications: 'MD, MBBS', status: 'active', patients: 48, treatments: 312 },
-  { id: 2, name: 'Dr. Sarah Wilson', email: 'dr.wilson@health.com', phone: '+1-555-2002', specialty: 'Cardiology', department: 'Cardiology', qualifications: 'MD, DM', status: 'active', patients: 35, treatments: 245 },
-  { id: 3, name: 'Dr. Priya Sharma', email: 'dr.sharma@health.com', phone: '+1-555-2003', specialty: 'Pediatrics', department: 'Pediatrics', qualifications: 'MD, DCH', status: 'active', patients: 52, treatments: 380 },
-  { id: 4, name: 'Dr. James Park', email: 'dr.park@health.com', phone: '+1-555-2004', specialty: 'Endocrinology', department: 'Endocrinology', qualifications: 'MD, DM', status: 'inactive', patients: 20, treatments: 150 },
-  { id: 5, name: 'Dr. Emily Roberts', email: 'dr.roberts@health.com', phone: '+1-555-2005', specialty: 'Neurology', department: 'Neurosciences', qualifications: 'MD, DM', status: 'active', patients: 28, treatments: 195 },
-];
+import { useAdminDoctors, useCreateDoctor, useUpdateDoctor, useRemoveDoctor } from '../../hooks/useAdmin';
 
 const specializations = ['General Medicine', 'Cardiology', 'Pediatrics', 'Endocrinology', 'Neurology', 'Orthopedics', 'Dermatology', 'Psychiatry', 'Ophthalmology', 'Radiology'];
 
 const DoctorManagement = () => {
-  const [doctors, setDoctors] = useState(initialDoctors);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState({ open: false, mode: 'add', doctor: null });
-
   const [form, setForm] = useState({ name: '', email: '', phone: '', specialty: '', department: '', qualifications: '' });
+
+  const { data: doctors = [], isLoading } = useAdminDoctors();
+  const createMutation = useCreateDoctor();
+  const updateMutation = useUpdateDoctor();
+  const removeMutation = useRemoveDoctor();
 
   const filtered = doctors.filter(d => {
     if (!search) return true;
@@ -34,22 +30,39 @@ const DoctorManagement = () => {
 
   const openEdit = (doc) => { setForm({ name: doc.name, email: doc.email, phone: doc.phone, specialty: doc.specialty, department: doc.department, qualifications: doc.qualifications }); setModal({ open: true, mode: 'edit', doctor: doc }); };
 
-  const save = () => {
+  const save = async () => {
     if (!form.name || !form.email) { toast.error('Name and email required'); return; }
-    if (modal.mode === 'add') {
-      setDoctors(prev => [...prev, { id: Date.now(), ...form, status: 'active', patients: 0, treatments: 0 }]);
-      toast.success('Doctor added successfully');
-    } else {
-      setDoctors(prev => prev.map(d => d.id === modal.doctor.id ? { ...d, ...form } : d));
-      toast.success('Doctor updated successfully');
+    try {
+      if (modal.mode === 'add') {
+        await createMutation.mutateAsync(form);
+        toast.success('Doctor added successfully');
+      } else {
+        await updateMutation.mutateAsync({ id: modal.doctor.id, ...form });
+        toast.success('Doctor updated successfully');
+      }
+      setModal({ open: false, mode: 'add', doctor: null });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Operation failed');
     }
-    setModal({ open: false, mode: 'add', doctor: null });
   };
 
-  const remove = (id) => {
-    setDoctors(prev => prev.filter(d => d.id !== id));
-    toast.success('Doctor removed');
+  const remove = async (id) => {
+    try {
+      await removeMutation.mutateAsync(id);
+      toast.success('Doctor removed');
+    } catch { toast.error('Failed to remove doctor'); }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading doctors...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -126,7 +139,7 @@ const DoctorManagement = () => {
             <input value={form.qualifications} onChange={e => setForm(p => ({ ...p, qualifications: e.target.value }))} className="input-base" placeholder="MD, MBBS" /></div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setModal({ open: false, mode: 'add', doctor: null })}>Cancel</Button>
-            <Button onClick={save} icon={modal.mode === 'add' ? Plus : Edit}>{modal.mode === 'add' ? 'Add Doctor' : 'Update Doctor'}</Button>
+            <Button onClick={save} icon={modal.mode === 'add' ? Plus : Edit} loading={createMutation.isPending || updateMutation.isPending}>{modal.mode === 'add' ? 'Add Doctor' : 'Update Doctor'}</Button>
           </div>
         </div>
       </Modal>

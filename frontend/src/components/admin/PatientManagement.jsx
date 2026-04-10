@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Search, Eye, Trash2, Edit, Droplets, Calendar, FileText } from 'lucide-react';
+import { Heart, Search, Eye, Trash2, Edit, Droplets, Calendar, FileText, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -8,24 +8,19 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatDate';
 import toast from 'react-hot-toast';
-
-const initialPatients = [
-  { id: 'P-1001', name: 'Sarah Johnson', email: 'sarah.j@email.com', dob: '1990-05-15', bloodGroup: 'O+', gender: 'Female', phone: '+1-555-0101', status: 'active', treatments: 24, lastVisit: '2026-03-05', conditions: ['Hypertension', 'Mild Asthma'] },
-  { id: 'P-1002', name: 'Robert Williams', email: 'robert.w@email.com', dob: '1985-08-22', bloodGroup: 'A+', gender: 'Male', phone: '+1-555-0102', status: 'active', treatments: 18, lastVisit: '2026-03-04', conditions: ['Diabetes'] },
-  { id: 'P-1003', name: 'Emily Davis', email: 'emily.d@email.com', dob: '1978-12-10', bloodGroup: 'B+', gender: 'Female', phone: '+1-555-0103', status: 'active', treatments: 31, lastVisit: '2026-03-03', conditions: ['Asthma', 'Allergies'] },
-  { id: 'P-1004', name: 'James Brown', email: 'james.b@email.com', dob: '1992-03-30', bloodGroup: 'AB-', gender: 'Male', phone: '+1-555-0104', status: 'active', treatments: 12, lastVisit: '2026-03-02', conditions: ['Back Pain'] },
-  { id: 'P-1005', name: 'Lisa Anderson', email: 'lisa.a@email.com', dob: '1988-07-18', bloodGroup: 'O-', gender: 'Female', phone: '+1-555-0105', status: 'deleted', treatments: 8, lastVisit: '2026-03-01', conditions: [] },
-  { id: 'P-1006', name: 'David Wilson', email: 'david.w@email.com', dob: '1975-11-25', bloodGroup: 'A-', gender: 'Male', phone: '+1-555-0106', status: 'active', treatments: 15, lastVisit: '2026-02-28', conditions: ['COPD'] },
-  { id: 'P-1007', name: 'Maria Garcia', email: 'maria.g@email.com', dob: '1995-01-08', bloodGroup: 'B-', gender: 'Female', phone: '+1-555-0107', status: 'active', treatments: 9, lastVisit: '2026-02-27', conditions: ['Thyroid'] },
-];
+import { useAdminPatients, useUpdatePatient, useSoftDeletePatient, useRestorePatient } from '../../hooks/useAdmin';
 
 const PatientManagement = () => {
-  const [patients, setPatients] = useState(initialPatients);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected] = useState(null);
   const [editModal, setEditModal] = useState(null);
   const [editForm, setEditForm] = useState({});
+
+  const { data: patients = [], isLoading } = useAdminPatients();
+  const updateMutation = useUpdatePatient();
+  const softDeleteMutation = useSoftDeletePatient();
+  const restoreMutation = useRestorePatient();
 
   const filtered = useMemo(() => {
     return patients.filter(p => {
@@ -38,23 +33,40 @@ const PatientManagement = () => {
     });
   }, [patients, search, statusFilter]);
 
-  const softDelete = (id) => {
-    setPatients(prev => prev.map(p => p.id === id ? { ...p, status: 'deleted' } : p));
-    toast.success('Patient soft deleted');
+  const softDelete = async (id) => {
+    try {
+      await softDeleteMutation.mutateAsync(id);
+      toast.success('Patient soft deleted');
+    } catch { toast.error('Failed to delete patient'); }
   };
 
-  const restore = (id) => {
-    setPatients(prev => prev.map(p => p.id === id ? { ...p, status: 'active' } : p));
-    toast.success('Patient restored');
+  const restore = async (id) => {
+    try {
+      await restoreMutation.mutateAsync(id);
+      toast.success('Patient restored');
+    } catch { toast.error('Failed to restore patient'); }
   };
 
   const openEdit = (p) => { setEditForm({ name: p.name, email: p.email, phone: p.phone }); setEditModal(p); };
 
-  const saveEdit = () => {
-    setPatients(prev => prev.map(p => p.id === editModal.id ? { ...p, ...editForm } : p));
-    setEditModal(null);
-    toast.success('Patient details updated');
+  const saveEdit = async () => {
+    try {
+      await updateMutation.mutateAsync({ id: editModal._id, ...editForm });
+      setEditModal(null);
+      toast.success('Patient details updated');
+    } catch { toast.error('Failed to update patient'); }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading patients...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -91,7 +103,7 @@ const PatientManagement = () => {
           </thead>
           <tbody>
             {filtered.map(p => (
-              <tr key={p.id} className="border-b border-surface-50 hover:bg-surface-50/50 transition-colors">
+              <tr key={p._id || p.id} className="border-b border-surface-50 hover:bg-surface-50/50 transition-colors">
                 <td className="table-cell font-mono text-xs text-surface-500">{p.id}</td>
                 <td className="table-cell">
                   <div className="flex items-center gap-2">
@@ -108,9 +120,9 @@ const PatientManagement = () => {
                   <div className="flex items-center justify-end gap-1">
                     <Button variant="ghost" size="sm" icon={Edit} onClick={() => openEdit(p)} />
                     {p.status === 'active' ? (
-                      <Button variant="ghost" size="sm" icon={Trash2} className="text-danger-500" onClick={() => softDelete(p.id)} />
+                      <Button variant="ghost" size="sm" icon={Trash2} className="text-danger-500" onClick={() => softDelete(p._id)} />
                     ) : (
-                      <Button variant="ghost" size="sm" className="text-success-500" onClick={() => restore(p.id)}>Restore</Button>
+                      <Button variant="ghost" size="sm" className="text-success-500" onClick={() => restore(p._id)}>Restore</Button>
                     )}
                   </div>
                 </td>
@@ -130,7 +142,7 @@ const PatientManagement = () => {
             <input value={editForm.phone || ''} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} className="input-base" /></div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setEditModal(null)}>Cancel</Button>
-            <Button onClick={saveEdit} icon={Edit}>Update</Button>
+            <Button onClick={saveEdit} icon={Edit} loading={updateMutation.isPending}>Update</Button>
           </div>
         </div>
       </Modal>

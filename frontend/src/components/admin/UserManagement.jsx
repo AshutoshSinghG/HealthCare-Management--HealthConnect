@@ -1,32 +1,28 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, Search, Edit, Lock, Unlock, KeyRound, Shield, Trash2, X, CheckCircle, UserPlus, Mail, Phone } from 'lucide-react';
+import { Users, Plus, Search, Edit, Lock, Unlock, KeyRound, Shield, Trash2, X, CheckCircle, UserPlus, Mail, Phone, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
-
-const initialUsers = [
-  { id: 1, name: 'Dr. Michael Chen', email: 'dr.chen@health.com', role: 'doctor', status: 'active', locked: false, lastLogin: '2026-03-05 14:30', mfa: true },
-  { id: 2, name: 'Dr. Sarah Wilson', email: 'dr.wilson@health.com', role: 'doctor', status: 'active', locked: false, lastLogin: '2026-03-05 12:15', mfa: true },
-  { id: 3, name: 'Sarah Johnson', email: 'sarah.j@email.com', role: 'patient', status: 'active', locked: false, lastLogin: '2026-03-05 10:00', mfa: false },
-  { id: 4, name: 'Robert Williams', email: 'robert.w@email.com', role: 'patient', status: 'active', locked: false, lastLogin: '2026-03-04 16:20', mfa: false },
-  { id: 5, name: 'Emily Davis', email: 'emily.d@email.com', role: 'patient', status: 'disabled', locked: false, lastLogin: '2026-02-28 09:00', mfa: false },
-  { id: 6, name: 'Admin User', email: 'admin@health.com', role: 'admin', status: 'active', locked: false, lastLogin: '2026-03-05 15:00', mfa: true },
-  { id: 7, name: 'Dr. James Park', email: 'dr.park@health.com', role: 'doctor', status: 'active', locked: true, lastLogin: '2026-03-03 11:30', mfa: true },
-  { id: 8, name: 'Lisa Anderson', email: 'lisa.a@email.com', role: 'patient', status: 'active', locked: false, lastLogin: '2026-03-01 08:45', mfa: false },
-];
+import { useAdminUsers, useCreateUser, useToggleUserStatus, useToggleUserLock, useChangeUserRole, useResetUserPassword } from '../../hooks/useAdmin';
 
 const roleColors = { doctor: 'info', patient: 'success', admin: 'warning' };
 const statusColors = { active: 'success', disabled: 'danger' };
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [createModal, setCreateModal] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'patient', phone: '' });
+
+  const { data: users = [], isLoading } = useAdminUsers();
+  const createMutation = useCreateUser();
+  const toggleStatusMutation = useToggleUserStatus();
+  const toggleLockMutation = useToggleUserLock();
+  const changeRoleMutation = useChangeUserRole();
+  const resetPasswordMutation = useResetUserPassword();
 
   const filtered = users.filter(u => {
     if (roleFilter && u.role !== roleFilter) return false;
@@ -37,32 +33,56 @@ const UserManagement = () => {
     return true;
   });
 
-  const toggleDisable = (id) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'disabled' : 'active' } : u));
-    toast.success('User status updated');
+  const toggleDisable = async (id) => {
+    try {
+      await toggleStatusMutation.mutateAsync(id);
+      toast.success('User status updated');
+    } catch { toast.error('Failed to update status'); }
   };
 
-  const toggleLock = (id) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, locked: !u.locked } : u));
-    toast.success('Account lock status updated');
+  const toggleLock = async (id) => {
+    try {
+      await toggleLockMutation.mutateAsync(id);
+      toast.success('Account lock status updated');
+    } catch { toast.error('Failed to update lock status'); }
   };
 
-  const resetPassword = (name) => {
-    toast.success(`Password reset link sent to ${name}`);
+  const resetPassword = async (id, name) => {
+    try {
+      await resetPasswordMutation.mutateAsync(id);
+      toast.success(`Password reset link sent to ${name}`);
+    } catch { toast.error('Failed to reset password'); }
   };
 
-  const changeRole = (id, newRole) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
-    toast.success('Role updated successfully');
+  const changeRole = async (id, newRole) => {
+    try {
+      await changeRoleMutation.mutateAsync({ id, role: newRole });
+      toast.success('Role updated successfully');
+    } catch { toast.error('Failed to update role'); }
   };
 
-  const createUser = () => {
+  const createUser = async () => {
     if (!newUser.name || !newUser.email) { toast.error('Name and email are required'); return; }
-    setUsers(prev => [...prev, { id: Date.now(), ...newUser, status: 'active', locked: false, lastLogin: 'Never', mfa: false }]);
-    setNewUser({ name: '', email: '', role: 'patient', phone: '' });
-    setCreateModal(false);
-    toast.success('User created successfully');
+    try {
+      await createMutation.mutateAsync(newUser);
+      setNewUser({ name: '', email: '', role: 'patient', phone: '' });
+      setCreateModal(false);
+      toast.success('User created successfully');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to create user');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -139,7 +159,7 @@ const UserManagement = () => {
                   <Button variant="ghost" size="sm" onClick={() => toggleLock(user.id)} title={user.locked ? 'Unlock' : 'Lock'}>
                     {user.locked ? <Unlock className="w-4 h-4 text-success-500" /> : <Lock className="w-4 h-4 text-surface-400" />}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => resetPassword(user.name)} title="Reset Password">
+                  <Button variant="ghost" size="sm" onClick={() => resetPassword(user.id, user.name)} title="Reset Password">
                     <KeyRound className="w-4 h-4 text-primary-500" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => toggleDisable(user.id)} title={user.status === 'active' ? 'Disable' : 'Enable'}>
@@ -167,7 +187,7 @@ const UserManagement = () => {
             </select></div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setCreateModal(false)}>Cancel</Button>
-            <Button onClick={createUser} icon={UserPlus}>Create User</Button>
+            <Button onClick={createUser} icon={UserPlus} loading={createMutation.isPending}>Create User</Button>
           </div>
         </div>
       </Modal>

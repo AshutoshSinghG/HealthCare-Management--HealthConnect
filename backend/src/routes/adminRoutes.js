@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const auditController = require('../controllers/auditController');
+const adminController = require('../controllers/adminController');
 const authenticate = require('../middlewares/authMiddleware');
 const authorise = require('../middlewares/roleMiddleware');
 
@@ -14,54 +15,42 @@ router.use(authorise('ADMIN'));
  *   description: Admin-only endpoints
  */
 
-/**
- * @swagger
- * /api/admin/dashboard:
- *   get:
- *     tags: [Admin]
- *     summary: Get admin dashboard stats
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Dashboard stats
- */
+// ─── Dashboard ──────────────────────────────────────────
 router.get('/dashboard', auditController.getDashboard);
 
-/**
- * @swagger
- * /api/admin/audit-logs:
- *   get:
- *     tags: [Admin]
- *     summary: List audit logs
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *       - in: query
- *         name: actionType
- *         schema:
- *           type: string
- *           enum: [LOGIN, LOGOUT, CREATE, READ, UPDATE, DELETE, EXPORT]
- *       - in: query
- *         name: entityType
- *         schema:
- *           type: string
- *       - in: query
- *         name: actorUserId
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Paginated audit logs
- */
+// ─── Audit Logs ──────────────────────────────────────────
 router.get('/audit-logs', auditController.listAuditLogs);
+
+// ─── User Management ──────────────────────────────────────────
+router.get('/users', adminController.listUsers);
+router.post('/users', adminController.createUser);
+router.put('/users/:id/status', adminController.toggleUserStatus);
+router.put('/users/:id/lock', adminController.toggleUserLock);
+router.put('/users/:id/role', adminController.changeUserRole);
+router.post('/users/:id/reset-password', adminController.resetUserPassword);
+
+// ─── Doctor Management ──────────────────────────────────────────
+router.get('/doctors', adminController.listDoctors);
+router.post('/doctors', adminController.createDoctor);
+router.put('/doctors/:id', adminController.updateDoctor);
+router.delete('/doctors/:id', adminController.removeDoctor);
+
+// ─── Patient Management ──────────────────────────────────────────
+router.get('/patients', adminController.listPatients);
+router.put('/patients/:id', adminController.updatePatient);
+router.put('/patients/:id/soft-delete', adminController.softDeletePatient);
+router.put('/patients/:id/restore', adminController.restorePatient);
+
+// ─── Medicine Safety ──────────────────────────────────────────
+router.get('/medicines', adminController.listMedicines);
+router.delete('/medicines/:id', adminController.removeMedicineFlag);
+
+// ─── Security Monitoring ──────────────────────────────────────────
+router.get('/security', adminController.getSecurityData);
+
+// ─── Export ──────────────────────────────────────────
+router.get('/export/patients', adminController.listExportPatients);
+router.get('/export/:patientId/pdf', adminController.adminExportPdf);
+router.get('/export/:patientId/excel', adminController.adminExportExcel);
 
 module.exports = router;

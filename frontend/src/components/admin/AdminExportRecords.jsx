@@ -1,24 +1,19 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, FileText, FileSpreadsheet, Search, CheckCircle, Table } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, Search, CheckCircle, Table, Loader2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import toast from 'react-hot-toast';
-
-const patients = [
-  { id: 'P-1001', name: 'Sarah Johnson', treatments: 24 },
-  { id: 'P-1002', name: 'Robert Williams', treatments: 18 },
-  { id: 'P-1003', name: 'Emily Davis', treatments: 31 },
-  { id: 'P-1004', name: 'James Brown', treatments: 12 },
-  { id: 'P-1005', name: 'Lisa Anderson', treatments: 8 },
-  { id: 'P-1006', name: 'David Wilson', treatments: 15 },
-  { id: 'P-1007', name: 'Maria Garcia', treatments: 9 },
-];
+import { useExportPatients, useAdminExportPdf, useAdminExportExcel } from '../../hooks/useAdmin';
 
 const AdminExportRecords = () => {
   const [search, setSearch] = useState('');
   const [exporting, setExporting] = useState(null);
+
+  const { data: patients = [], isLoading } = useExportPatients();
+  const pdfMutation = useAdminExportPdf();
+  const excelMutation = useAdminExportExcel();
 
   const filtered = patients.filter(p => {
     if (!search) return true;
@@ -28,25 +23,42 @@ const AdminExportRecords = () => {
 
   const exportPdf = async (patient) => {
     setExporting(`pdf-${patient.id}`);
-    await new Promise(r => setTimeout(r, 1500));
-    const blob = new Blob([`Medical Record PDF for ${patient.name}`], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${patient.name.replace(' ', '_')}_Records.pdf`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = await pdfMutation.mutateAsync(patient._id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${patient.name.replace(/ /g, '_')}_Records.pdf`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`PDF exported for ${patient.name}`);
+    } catch {
+      toast.error('Failed to export PDF');
+    }
     setExporting(null);
-    toast.success(`PDF exported for ${patient.name}`);
   };
 
   const exportExcel = async (patient) => {
     setExporting(`excel-${patient.id}`);
-    await new Promise(r => setTimeout(r, 1500));
-    const blob = new Blob([`Medical Record CSV for ${patient.name}`], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${patient.name.replace(' ', '_')}_Records.csv`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = await excelMutation.mutateAsync(patient._id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${patient.name.replace(/ /g, '_')}_Records.xlsx`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Excel exported for ${patient.name}`);
+    } catch {
+      toast.error('Failed to export Excel');
+    }
     setExporting(null);
-    toast.success(`Excel exported for ${patient.name}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-surface-500 text-sm">Loading patients...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -71,31 +83,35 @@ const AdminExportRecords = () => {
       </div>
 
       <div className="space-y-3">
-        {filtered.map((patient, i) => (
-          <motion.div key={patient.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card hover>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                    {patient.name.split(' ').map(n => n[0]).join('')}
+        {filtered.length === 0 ? (
+          <Card><p className="text-center text-surface-400 py-8">No patients found.</p></Card>
+        ) : (
+          filtered.map((patient, i) => (
+            <motion.div key={patient.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+              <Card hover>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      {patient.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-surface-800">{patient.name}</p>
+                      <p className="text-xs text-surface-500">{patient.id} · {patient.treatments} treatments</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm text-surface-800">{patient.name}</p>
-                    <p className="text-xs text-surface-500">{patient.id} · {patient.treatments} treatments</p>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" icon={FileText} loading={exporting === `pdf-${patient.id}`} onClick={() => exportPdf(patient)}>
+                      PDF
+                    </Button>
+                    <Button variant="outline" size="sm" icon={FileSpreadsheet} loading={exporting === `excel-${patient.id}`} onClick={() => exportExcel(patient)}>
+                      Excel
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" icon={FileText} loading={exporting === `pdf-${patient.id}`} onClick={() => exportPdf(patient)}>
-                    PDF
-                  </Button>
-                  <Button variant="outline" size="sm" icon={FileSpreadsheet} loading={exporting === `excel-${patient.id}`} onClick={() => exportExcel(patient)}>
-                    Excel
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        ))}
+              </Card>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );
