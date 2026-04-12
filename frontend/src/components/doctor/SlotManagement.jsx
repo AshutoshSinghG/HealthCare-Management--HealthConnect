@@ -21,10 +21,15 @@ const generateSlots = (startTime, endTime) => {
   const [sh, sm] = startTime.split(':').map(Number);
   const [eh, em] = endTime.split(':').map(Number);
   let cur = sh * 60 + sm;
-  const end = eh * 60 + em;
+  let end = eh * 60 + em;
+  
+  if (end <= cur) {
+    end += 24 * 60; // Handle spanning across midnight
+  }
+  
   while (cur + SLOT_DURATION <= end) {
-    const fromH = Math.floor(cur / 60), fromM = cur % 60;
-    const toH = Math.floor((cur + SLOT_DURATION) / 60), toM = (cur + SLOT_DURATION) % 60;
+    const fromH = Math.floor(cur / 60) % 24, fromM = cur % 60;
+    const toH = Math.floor((cur + SLOT_DURATION) / 60) % 24, toM = (cur + SLOT_DURATION) % 60;
     slots.push({ from: `${pad(fromH)}:${pad(fromM)}`, to: `${pad(toH)}:${pad(toM)}` });
     cur += SLOT_DURATION;
   }

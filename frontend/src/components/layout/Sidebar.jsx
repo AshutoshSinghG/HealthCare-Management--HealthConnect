@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, FileText, ClipboardList, ShieldCheck,
   ChevronLeft, ChevronRight, LogOut, Heart, Stethoscope,
-  AlertTriangle, PlusCircle, ScrollText, Activity, Pill, Download, Lock, CalendarDays,
+  AlertTriangle, PlusCircle, ScrollText, Activity, Pill, Download, Lock, CalendarDays, MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ROLES } from '../../utils/constants';
@@ -13,6 +13,7 @@ const patientLinks = [
   { to: '/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/patient/profile', label: 'Edit Profile', icon: Users },
   { to: '/patient/appointments', label: 'My Appointments', icon: CalendarDays },
+  { to: '/patient/chat', label: 'Live Chat', icon: MessageCircle },
   { to: '/patient/book-appointment', label: 'Book Appointment', icon: PlusCircle },
   { to: '/patient/treatments', label: 'My Treatments', icon: FileText },
   { to: '/patient/medications', label: 'My Medications', icon: Pill },
@@ -24,6 +25,7 @@ const doctorLinks = [
   { to: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/doctor/profile', label: 'Edit Profile', icon: Users },
   { to: '/doctor/slots', label: 'Appointment Slots', icon: CalendarDays },
+  { to: '/doctor/chat', label: 'Live Chat', icon: MessageCircle },
   { to: '/doctor/patients', label: 'My Patients', icon: Users },
   { to: '/doctor/treatments/create', label: 'New Treatment', icon: PlusCircle },
 ];

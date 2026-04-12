@@ -25,11 +25,32 @@ const getSlots = async (userId, query) => {
 
 const createSlot = async (userId, data) => {
   const doctor = await findDoctor(userId);
+  
+  const avail = await DoctorAvailability.findOne({ doctorId: doctor._id });
+  const shiftStartTime = avail ? avail.startTime : '09:00';
+  
+  const [baseY, baseM, baseD] = data.date.split('-').map(Number);
+  const [h, m] = data.from.split(':').map(Number);
+  const [th, tm] = data.to.split(':').map(Number);
+  const [sh, sm] = shiftStartTime.split(':').map(Number);
+  
+  const startDateTime = new Date(baseY, baseM - 1, baseD, h, m, 0);
+  if (h < sh || (h === sh && m < sm)) {
+    startDateTime.setDate(startDateTime.getDate() + 1);
+  }
+  
+  const endDateTime = new Date(baseY, baseM - 1, baseD, th, tm, 0);
+  if (th < sh || (th === sh && tm < sm) || (th < h)) {
+    endDateTime.setDate(endDateTime.getDate() + 1);
+  }
+  
   return DoctorSlot.create({
     doctorId: doctor._id,
     date: data.date,
     from: data.from,
     to: data.to,
+    startDateTime,
+    endDateTime,
     patient: data.patient || '',
     patientId: data.patientId || '',
     reason: data.reason || '',

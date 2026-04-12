@@ -77,7 +77,9 @@ export const getPublicSpecialties = async () => {
 };
 
 export const getDoctorSlots = async (doctorId, date) => {
-  const { data } = await api.get(`/public/doctors/${doctorId}/slots`, { params: { date } });
+  // Normalize date to local YYYY-MM-DD to avoid UTC timezone drift
+  const normalizedDate = date ? date.substring(0, 10) : date;
+  const { data } = await api.get(`/public/doctors/${doctorId}/slots`, { params: { date: normalizedDate } });
   return data.data;
 };
 

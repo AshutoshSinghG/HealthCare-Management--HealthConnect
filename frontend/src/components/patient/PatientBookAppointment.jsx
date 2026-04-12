@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Calendar, Clock, MapPin, Star, ShieldCheck, ChevronRight,
-  Stethoscope, CreditCard, CheckCircle, X, Info, Loader2
+  Stethoscope, CreditCard, CheckCircle, X, Info, Loader2, CalendarOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -12,13 +12,21 @@ import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 import { usePublicDoctors, usePublicSpecialties, useDoctorSlots, useBookAppointment } from '../../hooks/usePatients';
 
+// Helper: get today's date in local timezone as YYYY-MM-DD
+const getLocalDateString = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const PatientBookAppointment = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
 
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [selectedSlot, setSelectedSlot] = useState(null);
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -30,14 +38,35 @@ const PatientBookAppointment = () => {
     specialty: selectedSpecialty !== 'All' ? selectedSpecialty : undefined,
   });
   const { data: specialties = ['All'] } = usePublicSpecialties();
-  const { data: currentSlots = [], isLoading: loadingSlots } = useDoctorSlots(
+  const { data: slotsResponse, isLoading: loadingSlots } = useDoctorSlots(
     selectedDoctor?.id, selectedDate
   );
+
+  // Extract slots array and metadata from the new response format
+  // Backend returns { slots: [...], isWorkingDay, selectedDay, workingDays, availability }
+  const currentSlots = useMemo(() => {
+    if (!slotsResponse) return [];
+    // Support both old format (plain array) and new format (object with slots key)
+    if (Array.isArray(slotsResponse)) return slotsResponse;
+    return slotsResponse.slots || [];
+  }, [slotsResponse]);
+
+  const slotsMeta = useMemo(() => {
+    if (!slotsResponse || Array.isArray(slotsResponse)) {
+      return { isWorkingDay: true, selectedDay: '', workingDays: [] };
+    }
+    return {
+      isWorkingDay: slotsResponse.isWorkingDay,
+      selectedDay: slotsResponse.selectedDay || '',
+      workingDays: slotsResponse.workingDays || [],
+    };
+  }, [slotsResponse]);
+
   const bookMutation = useBookAppointment();
 
   // Actions
   const handleSlotSelect = (slot) => {
-    if (slot.status === 'booked') return;
+    if (slot.status === 'booked' || slot.status === 'pending') return;
     setSelectedSlot(slot);
     setPaymentModalOpen(true);
     setPaymentSuccess(false);
@@ -247,12 +276,13 @@ const PatientBookAppointment = () => {
                         type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
+                        min={getLocalDateString()}
                         className="input-base border-primary-200 focus:border-primary-500 focus:ring-primary-500/20 bg-white"
                       />
                     </div>
                     <div className="flex gap-4 text-xs font-medium">
                       <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-success-100 border border-success-200"></div> Vacant</span>
+                      <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-warning-100 border border-warning-200"></div> Pending</span>
                       <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-surface-100 border border-surface-200 opacity-60"></div> Booked</span>
                     </div>
                   </div>
@@ -261,6 +291,25 @@ const PatientBookAppointment = () => {
                   {loadingSlots ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
+                    </div>
+                  ) : !slotsMeta.isWorkingDay ? (
+                    /* Non-working day: show helpful message with working day info */
+                    <div className="text-center py-8 bg-warning-50/50 rounded-xl border border-warning-100">
+                      <CalendarOff className="w-10 h-10 mx-auto mb-3 text-warning-400" />
+                      <p className="text-sm font-semibold text-surface-700 mb-1">
+                        {slotsMeta.selectedDay} is not a working day
+                      </p>
+                      <p className="text-xs text-surface-500 mb-3">
+                        This doctor is not available on {slotsMeta.selectedDay}s.
+                      </p>
+                      {slotsMeta.workingDays.length > 0 && (
+                        <div className="inline-flex flex-wrap gap-1.5 justify-center">
+                          <span className="text-xs text-surface-500">Available on:</span>
+                          {slotsMeta.workingDays.map(day => (
+                            <span key={day} className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">{day}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : currentSlots.length === 0 ? (
                     <div className="text-center py-8 text-surface-400">
@@ -271,17 +320,21 @@ const PatientBookAppointment = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {currentSlots.map((slot) => {
                         const isBooked = slot.status === 'booked';
+                        const isPending = slot.status === 'pending';
+                        const isUnavailable = isBooked || isPending;
                         return (
                           <button
                             key={slot.id}
-                            disabled={isBooked}
+                            disabled={isUnavailable}
                             onClick={() => handleSlotSelect(slot)}
                             className={`p-3 rounded-xl border text-center transition-all ${isBooked
                               ? 'bg-surface-50 border-surface-200 text-surface-400 cursor-not-allowed opacity-60'
+                              : isPending
+                              ? 'bg-warning-50 border-warning-200 text-warning-600 cursor-not-allowed opacity-70'
                               : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
                               }`}
                           >
-                            <Clock className={`w-4 h-4 mx-auto mb-1 ${isBooked ? 'text-surface-400' : 'text-success-600'}`} />
+                            <Clock className={`w-4 h-4 mx-auto mb-1 ${isBooked ? 'text-surface-400' : isPending ? 'text-warning-500' : 'text-success-600'}`} />
                             <p className="text-sm font-bold">{slot.time}</p>
                             <p className="text-[10px] uppercase font-bold mt-0.5 tracking-wider">{slot.status}</p>
                           </button>
@@ -306,7 +359,7 @@ const PatientBookAppointment = () => {
             <h3 className="text-xl font-bold text-surface-800 mb-2">Payment Successful!</h3>
             <p className="text-surface-600">Your appointment with {selectedDoctor?.name} is confirmed.</p>
             <p className="text-sm font-medium text-surface-800 mt-4 bg-surface-50 p-3 rounded-lg inline-block">
-              {new Date(selectedDate).toLocaleDateString()} at {selectedSlot?.time}
+              {new Date(selectedDate + 'T00:00:00').toLocaleDateString()} at {selectedSlot?.time}
             </p>
           </motion.div>
         ) : (
@@ -318,7 +371,7 @@ const PatientBookAppointment = () => {
               </div>
               <div className="text-right">
                 <p className="font-semibold text-surface-800">{selectedDoctor?.name}</p>
-                <p className="text-xs text-surface-500">{new Date(selectedDate).toLocaleDateString()} · {selectedSlot?.time}</p>
+                <p className="text-xs text-surface-500">{new Date(selectedDate + 'T00:00:00').toLocaleDateString()} · {selectedSlot?.time}</p>
               </div>
             </div>
 
@@ -365,3 +418,4 @@ const PatientBookAppointment = () => {
 };
 
 export default PatientBookAppointment;
+

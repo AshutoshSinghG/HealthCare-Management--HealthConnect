@@ -21,6 +21,7 @@ import PatientExportRecords from './pages/patient/ExportRecords';
 import PatientProfileEdit from './pages/patient/ProfileEdit';
 import PatientMyAppointments from './pages/patient/Appointments';
 import PatientBookAppointment from './pages/patient/BookAppointment';
+import PatientChat from './pages/patient/Chat';
 
 // Doctor Pages
 import DoctorDashboard from './pages/doctor/Dashboard';
@@ -30,6 +31,7 @@ import DoctorCreateTreatment from './pages/doctor/CreateTreatment';
 import DoctorEditTreatment from './pages/doctor/EditTreatment';
 import DoctorProfileEdit from './pages/doctor/ProfileEdit';
 import DoctorSlots from './pages/doctor/Slots';
+import DoctorChat from './pages/doctor/Chat';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -95,6 +97,7 @@ function App() {
           <Route path="/patient/profile" element={<PatientProfileEdit />} />
           <Route path="/patient/appointments" element={<PatientMyAppointments />} />
           <Route path="/patient/book-appointment" element={<PatientBookAppointment />} />
+          <Route path="/patient/chat" element={<PatientChat />} />
         </Route>
 
         {/* Doctor Portal */}
@@ -114,6 +117,7 @@ function App() {
           <Route path="/doctor/treatments/edit/:treatmentId" element={<DoctorEditTreatment />} />
           <Route path="/doctor/profile" element={<DoctorProfileEdit />} />
           <Route path="/doctor/slots" element={<DoctorSlots />} />
+          <Route path="/doctor/chat" element={<DoctorChat />} />
         </Route>
 
         {/* Admin Portal */}

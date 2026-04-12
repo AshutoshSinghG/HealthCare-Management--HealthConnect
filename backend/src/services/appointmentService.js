@@ -110,7 +110,7 @@ const bookAppointment = async (userId, { slotId, reason }) => {
     // We need to handle the fact that doctorId might contain underscores (unlikely for ObjectId)
     // Better approach: virtual_{doctorId}_{date}_{from}
     const doctorId = parts[1];
-    const date = parts[2]; // YYYY-MM-DD
+    const date = parts[2] ? parts[2].substring(0, 10) : parts[2]; // YYYY-MM-DD (normalized)
     const fromTime = parts[3]; // HH:MM
 
     // Verify doctor exists
@@ -120,6 +120,25 @@ const bookAppointment = async (userId, { slotId, reason }) => {
       err.statusCode = 404;
       throw err;
     }
+
+    // Determine real Datetime considering midnight rollover
+    const avail = await DoctorAvailability.findOne({ doctorId });
+    const shiftStartTime = avail ? avail.startTime : '09:00';
+    
+    const [baseY, baseM, baseD] = date.split('-').map(Number);
+    const [h, m] = fromTime.split(':').map(Number);
+    const [sh, sm] = shiftStartTime.split(':').map(Number);
+    
+    // Create base slot time
+    const startDateTime = new Date(baseY, baseM - 1, baseD, h, m, 0);
+    // If slot hour is less than shift start hour (or same hour and less minute), it rolled over to the next day
+    if (h < sh || (h === sh && m < sm)) {
+      startDateTime.setDate(startDateTime.getDate() + 1);
+    }
+    
+    // Calculate end time (30 minutes later)
+    const endDateTime = new Date(startDateTime.getTime() + 30 * 60000);
+    const toTime = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
 
     // Verify no existing slot for this time is currently booked or pending
     const existingSlot = await DoctorSlot.findOne({
@@ -133,17 +152,14 @@ const bookAppointment = async (userId, { slotId, reason }) => {
       throw err;
     }
 
-    // Calculate end time (30 minutes later)
-    const [h, m] = fromTime.split(':').map(Number);
-    const endMin = h * 60 + m + 30;
-    const toTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
-
     if (existingSlot) {
       // Update existing vacant slot
       existingSlot.patientId = patient._id.toString();
       existingSlot.patient = `${patient.firstName} ${patient.lastName}`;
       existingSlot.reason = reason || '';
       existingSlot.status = 'pending';
+      existingSlot.startDateTime = startDateTime;
+      existingSlot.endDateTime = endDateTime;
       await existingSlot.save();
       return existingSlot;
     }
@@ -154,6 +170,8 @@ const bookAppointment = async (userId, { slotId, reason }) => {
       date,
       from: fromTime,
       to: toTime,
+      startDateTime,
+      endDateTime,
       patientId: patient._id.toString(),
       patient: `${patient.firstName} ${patient.lastName}`,
       reason: reason || '',

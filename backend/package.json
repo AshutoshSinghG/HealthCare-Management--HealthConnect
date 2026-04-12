@@ -7,7 +7,12 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
-  "keywords": ["healthcare", "hospital", "management", "api"],
+  "keywords": [
+    "healthcare",
+    "hospital",
+    "management",
+    "api"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -26,6 +31,7 @@
     "nodemailer": "^6.9.14",
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.4",
+    "socket.io": "^4.8.3",
     "speakeasy": "^2.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

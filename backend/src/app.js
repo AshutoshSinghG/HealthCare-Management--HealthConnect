@@ -21,6 +21,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const slotRoutes = require('./routes/slotRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const publicDoctorRoutes = require('./routes/publicDoctorRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/doctor-slots', slotRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/public', publicDoctorRoutes);
+app.use('/api/chat', chatRoutes);
 // --------------- Swagger Documentation ---------------
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

@@ -2,14 +2,31 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const env = require('./config/env');
 const logger = require('./utils/logger');
+const http = require('http');
+const { Server } = require('socket.io');
+const handleSocketConnection = require('./socketHandler');
 
 const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
 
-    // Start Express server
-    const server = app.listen(env.PORT, () => {
+    // Start Express + HTTP server
+    const server = http.createServer(app);
+    
+    // Initialize Socket.IO
+    const io = new Server(server, {
+      cors: {
+        origin: env.CORS_ORIGIN,
+        methods: ['GET', 'POST'],
+        credentials: true
+      }
+    });
+    
+    // Handle socket connections
+    handleSocketConnection(io);
+
+    server.listen(env.PORT, () => {
       logger.info(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);
       logger.info(`API Docs: http://localhost:${env.PORT}/api-docs`);
       logger.info(`Health:   http://localhost:${env.PORT}/api/health`);

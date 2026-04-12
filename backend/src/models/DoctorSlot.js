@@ -20,6 +20,12 @@ const doctorSlotSchema = new mongoose.Schema(
       type: String,
       required: [true, 'End time is required'],
     },
+    startDateTime: {
+      type: Date,
+    },
+    endDateTime: {
+      type: Date,
+    },
     patient: {
       type: String,
       default: '',
