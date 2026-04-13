@@ -6,27 +6,30 @@ const Patient = require('../models/Patient');
 /**
  * Check if the current time is within a slot's time window on the correct date.
  */
-const isTimeWithinSlot = (dateStr, fromStr, toStr) => {
+const isTimeWithinSlot = (slot) => {
   const now = new Date();
-  
-  // Format current date as YYYY-MM-DD in local time (or UTC depending on system)
-  // Assuming the system dates match the timezone where appointments happen.
-  // To keep it simple and match standard JS:
+
+  // Primary exact match using startDateTime and endDateTime
+  if (slot.startDateTime && slot.endDateTime) {
+    return now >= new Date(slot.startDateTime) && now <= new Date(slot.endDateTime);
+  }
+
+  // Fallback for older slots lacking startDateTime/endDateTime
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const todayStr = `${year}-${month}-${day}`;
 
-  if (dateStr !== todayStr) return false;
+  if (slot.date !== todayStr) return false;
 
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
   const currentTotalMins = currentHour * 60 + currentMinute;
 
-  const [fromHour, fromMin] = fromStr.split(':').map(Number);
+  const [fromHour, fromMin] = slot.from.split(':').map(Number);
   const fromTotalMins = fromHour * 60 + fromMin;
 
-  const [toHour, toMin] = toStr.split(':').map(Number);
+  const [toHour, toMin] = slot.to.split(':').map(Number);
   const toTotalMins = toHour * 60 + toMin;
 
   return currentTotalMins >= fromTotalMins && currentTotalMins <= toTotalMins;
@@ -37,7 +40,7 @@ const isTimeWithinSlot = (dateStr, fromStr, toStr) => {
  */
 const validateChatAccess = async (slotId, userId, userRole) => {
   const slot = await DoctorSlot.findById(slotId);
-  if (!slot || slot.status !== 'booked') {
+  if (!slot || !['booked', 'pending'].includes(slot.status)) {
     return { valid: false, message: 'Invalid or unbooked appointment slot.' };
   }
 
@@ -57,8 +60,8 @@ const validateChatAccess = async (slotId, userId, userRole) => {
   }
 
   // Check time window
-  if (!isTimeWithinSlot(slot.date, slot.from, slot.to)) {
-    return { valid: false, message: 'Chat is only available during the scheduled appointment time format YYYY-MM-DD and HH:mm window.' };
+  if (!isTimeWithinSlot(slot)) {
+    return { valid: false, message: 'Chat is only available during the scheduled appointment time window.' };
   }
 
   return { valid: true, slot };
@@ -68,12 +71,16 @@ const validateChatAccess = async (slotId, userId, userRole) => {
  * Get active chats (appointments currently happening)
  */
 const getActiveChats = async (userId, userRole) => {
-  let filter = { status: 'booked' };
-  
-  // Need to get today's date
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  filter.date = todayStr;
+
+  let filter = { 
+    status: { $in: ['booked', 'pending'] },
+    $or: [
+      { startDateTime: { $lte: now }, endDateTime: { $gte: now } },
+      { date: todayStr } // Fallback for older records
+    ]
+  };
 
   if (userRole === 'DOCTOR') {
     const doctor = await Doctor.findOne({ userId });
@@ -90,7 +97,7 @@ const getActiveChats = async (userId, userRole) => {
   // Filter by time window and map data
   const activeChats = [];
   for (const slot of slots) {
-    if (isTimeWithinSlot(slot.date, slot.from, slot.to)) {
+    if (isTimeWithinSlot(slot)) {
       let partnerName = '';
       let partnerId = '';
       let partnerRole = '';

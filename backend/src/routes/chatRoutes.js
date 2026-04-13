@@ -5,7 +5,7 @@ const authorise = require('../middlewares/roleMiddleware');
 
 // All chat routes require authentication, allow Doctor OR Patient
 router.use(authenticate);
-router.use(authorise(['DOCTOR', 'PATIENT']));
+router.use(authorise('DOCTOR', 'PATIENT'));
 
 /**
  * @swagger
