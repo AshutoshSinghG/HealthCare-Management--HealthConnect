@@ -173,7 +173,7 @@ const PatientBookAppointment = () => {
                             <span>{doc.exp} Years Experience</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs font-semibold text-success-600 bg-success-50 px-2 py-1 rounded w-fit mt-2">
-                            Consultation Fee: ${doc.fee}
+                            Consultation Fee: ₹{doc.fee}
                           </div>
                         </div>
 
@@ -330,8 +330,8 @@ const PatientBookAppointment = () => {
                             className={`p-3 rounded-xl border text-center transition-all ${isBooked
                               ? 'bg-surface-50 border-surface-200 text-surface-400 cursor-not-allowed opacity-60'
                               : isPending
-                              ? 'bg-warning-50 border-warning-200 text-warning-600 cursor-not-allowed opacity-70'
-                              : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
+                                ? 'bg-warning-50 border-warning-200 text-warning-600 cursor-not-allowed opacity-70'
+                                : 'bg-white border-success-200 text-success-700 hover:bg-success-50 hover:border-success-300 shadow-sm'
                               }`}
                           >
                             <Clock className={`w-4 h-4 mx-auto mb-1 ${isBooked ? 'text-surface-400' : isPending ? 'text-warning-500' : 'text-success-600'}`} />
@@ -367,7 +367,7 @@ const PatientBookAppointment = () => {
             <div className="bg-primary-50 p-4 rounded-xl border border-primary-100 flex justify-between items-center">
               <div>
                 <p className="text-xs font-semibold text-primary-600 uppercase">Consultation Fee</p>
-                <p className="text-2xl font-bold text-primary-800">${selectedDoctor?.fee}</p>
+                <p className="text-2xl font-bold text-primary-800">₹{selectedDoctor?.fee}</p>
               </div>
               <div className="text-right">
                 <p className="font-semibold text-surface-800">{selectedDoctor?.name}</p>
@@ -407,7 +407,7 @@ const PatientBookAppointment = () => {
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="ghost" className="flex-1" onClick={() => setPaymentModalOpen(false)} disabled={bookMutation.isPending}>Cancel</Button>
               <Button type="submit" className="flex-1" loading={bookMutation.isPending}>
-                {bookMutation.isPending ? 'Processing...' : `Pay $${selectedDoctor?.fee} & Book`}
+                {bookMutation.isPending ? 'Processing...' : `Pay ₹${selectedDoctor?.fee} & Book`}
               </Button>
             </div>
           </form>

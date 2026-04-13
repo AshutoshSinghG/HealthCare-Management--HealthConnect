@@ -22,11 +22,11 @@ const generateSlots = (startTime, endTime) => {
   const [eh, em] = endTime.split(':').map(Number);
   let cur = sh * 60 + sm;
   let end = eh * 60 + em;
-  
+
   if (end <= cur) {
     end += 24 * 60; // Handle spanning across midnight
   }
-  
+
   while (cur + SLOT_DURATION <= end) {
     const fromH = Math.floor(cur / 60) % 24, fromM = cur % 60;
     const toH = Math.floor((cur + SLOT_DURATION) / 60) % 24, toM = (cur + SLOT_DURATION) % 60;
@@ -63,7 +63,7 @@ const SlotManagement = () => {
   const updateAvailMutation = useUpdateDoctorAvailability();
 
   const { data: availData } = useDoctorAvailability();
-  const availability = availData || { startTime: '09:00', endTime: '17:00', consultationFee: 150, workingDays: [1,2,3,4,5] };
+  const availability = availData || { startTime: '09:00', endTime: '17:00', consultationFee: 150, workingDays: [1, 2, 3, 4, 5] };
 
   const [viewMode, setViewMode] = useState('Daily');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -177,9 +177,9 @@ const SlotManagement = () => {
 
   const tabs = [
     { key: 'overview', label: 'All Slots', count: rangeBookings.length },
-    { key: 'pending',  label: 'Pending',   count: stats.pending },
-    { key: 'booked',   label: 'Booked',    count: stats.booked },
-    { key: 'rejected', label: 'Rejected',  count: stats.rejected },
+    { key: 'pending', label: 'Pending', count: stats.pending },
+    { key: 'booked', label: 'Booked', count: stats.booked },
+    { key: 'rejected', label: 'Rejected', count: stats.rejected },
   ];
 
   // ── daily slot grid ──
@@ -403,7 +403,7 @@ const SlotManagement = () => {
           <p className="text-xs font-medium text-surface-500">Vacant</p>
         </div>
         <div className="bg-violet-50 border border-violet-100 rounded-2xl p-3 text-center">
-          <p className="text-xl font-bold text-violet-700">${availability.consultationFee}</p>
+          <p className="text-xl font-bold text-violet-700">₹{availability.consultationFee}</p>
           <p className="text-xs font-medium text-violet-600">Consult Fee</p>
         </div>
       </div>
@@ -470,7 +470,7 @@ const SlotManagement = () => {
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-surface-700">Consultation Fee ($)</label>
+            <label className="block text-sm font-medium text-surface-700">Consultation Fee (₹)</label>
             <input type="number" min="0" value={tempAvail.consultationFee} onChange={e => setTempAvail(p => ({ ...p, consultationFee: Number(e.target.value) }))} className="input-base" />
           </div>
           <div className="space-y-1.5">
