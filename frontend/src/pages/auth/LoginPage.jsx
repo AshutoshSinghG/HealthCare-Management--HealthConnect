@@ -130,6 +130,13 @@ const LoginPage = () => {
           </motion.div>
 
           <LoginForm onSubmit={handleLogin} loading={loading} />
+
+            <p className="mt-6 text-sm text-surface-500 leading-relaxed">
+              <strong> You can use a demo account to explore the application. </strong> </p>
+              
+              <p className="text-sm text-surface-500 leading-relaxed">🔑 patient@gmail.com for Patient </p> <p
+              className="text-sm text-surface-500 leading-relaxed">🔑 doctor@gmail.com for Doctor </p><p
+              className="text-sm text-surface-500 leading-relaxed">🔑 admin@gmail.com for Admin </p><p className="text-sm text-surface-500 leading-relaxed">Password is "Test@123" for all.</p>
         </div>
       </div>
     </div>
