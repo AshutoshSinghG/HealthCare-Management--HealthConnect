@@ -10,6 +10,7 @@ import Card from '../../components/ui/Card';
 import MedicationForm from './MedicationForm';
 import { TREATMENT_OUTCOMES } from '../../utils/constants';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useCreateTreatment, useDoctorPatients } from '../../hooks/useDoctors';
 import { useState, useMemo } from 'react';
 
@@ -61,8 +62,8 @@ const CreateTreatmentForm = () => {
       await createMutation.mutateAsync({ patientId, ...treatmentData });
       toast.success('Treatment created successfully!');
       navigate('/doctor/patients');
-    } catch {
-      toast.error('Failed to create treatment');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to create treatment. Please check your input.'));
     }
   };
 

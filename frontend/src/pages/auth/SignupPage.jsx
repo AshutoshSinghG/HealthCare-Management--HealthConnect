@@ -5,6 +5,7 @@ import { Activity, Heart, Shield, Users, Stethoscope, UserPlus, CheckCircle } fr
 import SignupForm from '../../components/auth/SignupForm';
 import { register as registerUser } from '../../api/authApi';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 const benefits = [
   { icon: CheckCircle, text: 'Secure medical records management' },
@@ -53,8 +54,7 @@ const SignupPage = () => {
       toast.success('Account created successfully! Please sign in.');
       navigate('/login');
     } catch (err) {
-      const message = err.response?.data?.message || err.message || 'Signup failed. Please try again.';
-      toast.error(message);
+      toast.error(extractErrorMessage(err, 'Signup failed. Please try again.'));
     } finally {
       setLoading(false);
     }

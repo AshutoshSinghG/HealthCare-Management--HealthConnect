@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ForgotPasswordForm from '../../components/auth/ForgotPasswordForm';
 import { Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 const ForgotPasswordPage = () => {
   const [loading, setLoading] = useState(false);
@@ -14,8 +15,8 @@ const ForgotPasswordPage = () => {
       await new Promise(r => setTimeout(r, 1000));
       setSent(true);
       toast.success('Reset email sent!');
-    } catch {
-      toast.error('Failed to send reset email');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to send reset email. Please try again.'));
     } finally {
       setLoading(false);
     }

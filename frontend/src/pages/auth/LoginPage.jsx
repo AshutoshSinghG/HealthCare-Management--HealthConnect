@@ -6,6 +6,7 @@ import LoginForm from '../../components/auth/LoginForm';
 import { useAuth } from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 const features = [
   { icon: Heart, label: 'Patient Care', desc: 'Comprehensive patient management' },
@@ -31,7 +32,7 @@ const LoginPage = () => {
       };
       navigate(dashboards[result.user.role] || '/patient/dashboard');
     } catch (err) {
-      toast.error(err.message || 'Login failed');
+      toast.error(extractErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }

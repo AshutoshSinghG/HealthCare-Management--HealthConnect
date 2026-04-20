@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { usePatientProfile, useUpdatePatientProfile } from '../../hooks/usePatients';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -103,8 +104,8 @@ const PatientProfileEdit = () => {
       await updateMutation.mutateAsync(payload);
       toast.success('Profile updated successfully!');
       navigate('/patient/dashboard');
-    } catch {
-      toast.error('Failed to update profile');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to update profile.'));
     }
   };
 

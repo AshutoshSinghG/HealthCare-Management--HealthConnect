@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useExportPatients, useAdminExportPdf, useAdminExportExcel } from '../../hooks/useAdmin';
 
 const AdminExportRecords = () => {
@@ -29,8 +30,8 @@ const AdminExportRecords = () => {
       const a = document.createElement('a'); a.href = url; a.download = `${patient.name.replace(/ /g, '_')}_Records.pdf`; a.click();
       URL.revokeObjectURL(url);
       toast.success(`PDF exported for ${patient.name}`);
-    } catch {
-      toast.error('Failed to export PDF');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to export PDF.'));
     }
     setExporting(null);
   };
@@ -43,8 +44,8 @@ const AdminExportRecords = () => {
       const a = document.createElement('a'); a.href = url; a.download = `${patient.name.replace(/ /g, '_')}_Records.xlsx`; a.click();
       URL.revokeObjectURL(url);
       toast.success(`Excel exported for ${patient.name}`);
-    } catch {
-      toast.error('Failed to export Excel');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to export Excel.'));
     }
     setExporting(null);
   };

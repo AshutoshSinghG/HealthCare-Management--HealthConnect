@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { usePublicDoctors, usePublicSpecialties, useDoctorSlots, useBookAppointment } from '../../hooks/usePatients';
 
 // Helper: get today's date in local timezone as YYYY-MM-DD
@@ -89,8 +90,8 @@ const PatientBookAppointment = () => {
         toast.success('Appointment booked successfully!');
         navigate('/patient/appointments');
       }, 2000);
-    } catch {
-      toast.error('Failed to book appointment');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to book appointment.'));
     }
   };
 

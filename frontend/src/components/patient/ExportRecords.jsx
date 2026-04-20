@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { exportPdf, exportExcel } from '../../api/patientApi';
 
 const ExportRecords = () => {
@@ -22,8 +23,8 @@ const ExportRecords = () => {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Medical records exported as PDF successfully!');
-    } catch {
-      toast.error('Failed to export PDF');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to export PDF.'));
     } finally {
       setExportingPdf(false);
     }
@@ -40,8 +41,8 @@ const ExportRecords = () => {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Medical records exported as Excel successfully!');
-    } catch {
-      toast.error('Failed to export Excel');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to export Excel.'));
     } finally {
       setExportingExcel(false);
     }

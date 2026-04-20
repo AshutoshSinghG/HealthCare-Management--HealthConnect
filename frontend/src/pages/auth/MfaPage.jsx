@@ -1,6 +1,7 @@
 import MFAForm from '../../components/auth/MFAForm';
 import { Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -14,8 +15,8 @@ const MfaPage = () => {
       // In production: await verifyMfa({ code })
       toast.success('Verification successful!');
       navigate('/patient/dashboard');
-    } catch {
-      toast.error('Invalid code. Please try again.');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }

@@ -1,11 +1,23 @@
 const Joi = require('joi');
 
 const updatePatientSchema = Joi.object({
-  firstName: Joi.string().trim().min(1).max(100).optional(),
-  lastName: Joi.string().trim().min(1).max(100).optional(),
-  dateOfBirth: Joi.date().optional(),
-  gender: Joi.string().valid('Male', 'Female', 'Other').optional(),
-  bloodGroup: Joi.string().valid('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-').optional(),
+  firstName: Joi.string().trim().min(1).max(100).optional().messages({
+    'string.empty': 'First name cannot be empty',
+    'string.max': 'First name must not exceed 100 characters',
+  }),
+  lastName: Joi.string().trim().min(1).max(100).optional().messages({
+    'string.empty': 'Last name cannot be empty',
+    'string.max': 'Last name must not exceed 100 characters',
+  }),
+  dateOfBirth: Joi.date().optional().messages({
+    'date.base': 'Please provide a valid date of birth',
+  }),
+  gender: Joi.string().valid('Male', 'Female', 'Other').optional().messages({
+    'any.only': 'Gender must be Male, Female, or Other',
+  }),
+  bloodGroup: Joi.string().valid('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-').optional().messages({
+    'any.only': 'Blood group must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-',
+  }),
   phoneNumber: Joi.string().trim().optional(),
   address: Joi.object({
     street: Joi.string().allow('').optional(),
@@ -20,7 +32,9 @@ const updatePatientSchema = Joi.object({
   emergencyContactAddress: Joi.string().allow('').optional(),
   chronicConditions: Joi.array().items(Joi.string()).optional(),
   knownAllergies: Joi.array().items(Joi.string()).optional(),
-}).min(1);
+}).min(1).messages({
+  'object.min': 'Please provide at least one field to update',
+});
 
 const unsuitableMedicineSchema = Joi.object({
   medicineName: Joi.string().trim().min(1).required().messages({

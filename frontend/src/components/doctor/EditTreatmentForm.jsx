@@ -11,6 +11,7 @@ import Badge from '../../components/ui/Badge';
 import MedicationForm from './MedicationForm';
 import { TREATMENT_OUTCOMES } from '../../utils/constants';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useTreatmentForEdit, useUpdateTreatment } from '../../hooks/useDoctors';
 import { useEffect } from 'react';
 
@@ -72,8 +73,8 @@ const EditTreatmentForm = () => {
       await updateMutation.mutateAsync({ id: treatmentId, data });
       toast.success('Treatment record updated successfully!');
       navigate(-1);
-    } catch {
-      toast.error('Failed to update treatment');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to update treatment. Please check your input.'));
     }
   };
 

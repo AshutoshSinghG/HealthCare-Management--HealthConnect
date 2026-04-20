@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useAdminMedicines, useRemoveMedicineFlag } from '../../hooks/useAdmin';
 
 const severityColors = { critical: 'danger', high: 'warning', medium: 'info', low: 'default' };
@@ -32,7 +33,7 @@ const MedicineControl = () => {
     try {
       await removeMutation.mutateAsync(id);
       toast.success('Medicine flag removed by admin');
-    } catch { toast.error('Failed to remove flag'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to remove flag.')); }
   };
 
   const stats = {

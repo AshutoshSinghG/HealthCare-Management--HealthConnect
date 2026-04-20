@@ -6,6 +6,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useAdminDoctors, useCreateDoctor, useUpdateDoctor, useRemoveDoctor } from '../../hooks/useAdmin';
 
 const specializations = ['General Medicine', 'Cardiology', 'Pediatrics', 'Endocrinology', 'Neurology', 'Orthopedics', 'Dermatology', 'Psychiatry', 'Ophthalmology', 'Radiology'];
@@ -42,7 +43,7 @@ const DoctorManagement = () => {
       }
       setModal({ open: false, mode: 'add', doctor: null });
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Operation failed');
+      toast.error(extractErrorMessage(err, 'Operation failed.'));
     }
   };
 
@@ -50,7 +51,7 @@ const DoctorManagement = () => {
     try {
       await removeMutation.mutateAsync(id);
       toast.success('Doctor removed');
-    } catch { toast.error('Failed to remove doctor'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to remove doctor.')); }
   };
 
   if (isLoading) {

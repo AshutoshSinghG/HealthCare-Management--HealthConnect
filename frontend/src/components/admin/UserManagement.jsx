@@ -6,6 +6,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useAdminUsers, useCreateUser, useToggleUserStatus, useToggleUserLock, useChangeUserRole, useResetUserPassword } from '../../hooks/useAdmin';
 
 const roleColors = { doctor: 'info', patient: 'success', admin: 'warning' };
@@ -37,28 +38,28 @@ const UserManagement = () => {
     try {
       await toggleStatusMutation.mutateAsync(id);
       toast.success('User status updated');
-    } catch { toast.error('Failed to update status'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to update status.')); }
   };
 
   const toggleLock = async (id) => {
     try {
       await toggleLockMutation.mutateAsync(id);
       toast.success('Account lock status updated');
-    } catch { toast.error('Failed to update lock status'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to update lock status.')); }
   };
 
   const resetPassword = async (id, name) => {
     try {
       await resetPasswordMutation.mutateAsync(id);
       toast.success(`Password reset link sent to ${name}`);
-    } catch { toast.error('Failed to reset password'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to reset password.')); }
   };
 
   const changeRole = async (id, newRole) => {
     try {
       await changeRoleMutation.mutateAsync({ id, role: newRole });
       toast.success('Role updated successfully');
-    } catch { toast.error('Failed to update role'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to update role.')); }
   };
 
   const createUser = async () => {
@@ -69,7 +70,7 @@ const UserManagement = () => {
       setCreateModal(false);
       toast.success('User created successfully');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to create user');
+      toast.error(extractErrorMessage(err, 'Failed to create user.'));
     }
   };
 

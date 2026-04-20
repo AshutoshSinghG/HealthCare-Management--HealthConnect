@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useDoctorProfile, useUpdateDoctorProfile } from '../../hooks/useDoctors';
 
 const specializations = ['General Medicine', 'Cardiology', 'Pediatrics', 'Endocrinology', 'Neurology', 'Orthopedics', 'Dermatology', 'Psychiatry', 'Ophthalmology', 'Radiology', 'Pulmonology', 'Nephrology'];
@@ -56,7 +57,7 @@ const DoctorProfileEdit = () => {
       });
       toast.success('Profile updated successfully!');
       navigate('/doctor/dashboard');
-    } catch { toast.error('Failed to update profile'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to update profile. Please check your input.')); }
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;

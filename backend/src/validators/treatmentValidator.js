@@ -24,8 +24,14 @@ const createTreatmentSchema = Joi.object({
   medications: Joi.array()
     .items(
       Joi.object({
-        name: Joi.string().trim().required(),
-        dosage: Joi.string().trim().required(),
+        name: Joi.string().trim().required().messages({
+          'any.required': 'Medicine name is required',
+          'string.empty': 'Medicine name is required',
+        }),
+        dosage: Joi.string().trim().required().messages({
+          'any.required': 'Dosage is required',
+          'string.empty': 'Dosage is required',
+        }),
         frequency: Joi.string().trim().allow('').optional(),
         duration: Joi.string().trim().allow('').optional(),
         route: Joi.string().trim().allow('').optional(),
@@ -49,8 +55,14 @@ const updateTreatmentSchema = Joi.object({
   medications: Joi.array()
     .items(
       Joi.object({
-        name: Joi.string().trim().required(),
-        dosage: Joi.string().trim().required(),
+        name: Joi.string().trim().required().messages({
+          'any.required': 'Medicine name is required',
+          'string.empty': 'Medicine name is required',
+        }),
+        dosage: Joi.string().trim().required().messages({
+          'any.required': 'Dosage is required',
+          'string.empty': 'Dosage is required',
+        }),
         frequency: Joi.string().trim().allow('').optional(),
         duration: Joi.string().trim().allow('').optional(),
         route: Joi.string().trim().allow('').optional(),
@@ -58,6 +70,8 @@ const updateTreatmentSchema = Joi.object({
       })
     )
     .optional(),
-}).min(1);
+}).min(1).messages({
+  'object.min': 'Please provide at least one field to update',
+});
 
 module.exports = { createTreatmentSchema, updateTreatmentSchema };

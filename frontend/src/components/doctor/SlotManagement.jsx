@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useDoctorSlots, useCreateDoctorSlot, useDeleteDoctorSlot, useUpdateSlotStatus, useDoctorAvailability, useUpdateDoctorAvailability } from '../../hooks/useDoctors';
 
 // ── helpers ──
@@ -143,13 +144,14 @@ const SlotManagement = () => {
     setCurrentDate(d);
   };
 
-  const accept = id => { updateStatusMutation.mutate({ id, status: 'booked' }, { onSuccess: () => toast.success('Appointment accepted') }); };
-  const reject = id => { updateStatusMutation.mutate({ id, status: 'rejected' }, { onSuccess: () => toast.success('Appointment rejected') }); };
-  const deleteSlot = id => { deleteSlotMutation.mutate(id, { onSuccess: () => toast.success('Slot deleted') }); };
+  const accept = id => { updateStatusMutation.mutate({ id, status: 'booked' }, { onSuccess: () => toast.success('Appointment accepted'), onError: (err) => toast.error(extractErrorMessage(err, 'Failed to accept appointment.')) }); };
+  const reject = id => { updateStatusMutation.mutate({ id, status: 'rejected' }, { onSuccess: () => toast.success('Appointment rejected'), onError: (err) => toast.error(extractErrorMessage(err, 'Failed to reject appointment.')) }); };
+  const deleteSlot = id => { deleteSlotMutation.mutate(id, { onSuccess: () => toast.success('Slot deleted'), onError: (err) => toast.error(extractErrorMessage(err, 'Failed to delete slot.')) }); };
 
   const saveAvailability = () => {
     updateAvailMutation.mutate(tempAvail, {
       onSuccess: () => { setSettingsOpen(false); toast.success('Availability updated'); },
+      onError: (err) => toast.error(extractErrorMessage(err, 'Failed to update availability.')),
     });
   };
 
@@ -161,6 +163,7 @@ const SlotManagement = () => {
         setAddSlotOpen(false);
         toast.success('Slot created');
       },
+      onError: (err) => toast.error(extractErrorMessage(err, 'Failed to create slot.')),
     });
   };
 

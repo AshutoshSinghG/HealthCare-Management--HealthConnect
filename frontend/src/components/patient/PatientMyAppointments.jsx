@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useMyAppointments, useCancelAppointment } from '../../hooks/usePatients';
 
 const tabs = [
@@ -43,8 +44,8 @@ const PatientMyAppointments = () => {
       setCancelModalOpen(false);
       toast.success('Appointment cancelled successfully');
       setActiveTab('cancelled');
-    } catch {
-      toast.error('Failed to cancel appointment');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to cancel appointment.'));
     }
   };
 

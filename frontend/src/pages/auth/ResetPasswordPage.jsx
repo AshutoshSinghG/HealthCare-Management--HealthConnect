@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ResetPasswordForm from '../../components/auth/ResetPasswordForm';
 import { Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 const ResetPasswordPage = () => {
   const [loading, setLoading] = useState(false);
@@ -14,8 +15,8 @@ const ResetPasswordPage = () => {
       await new Promise(r => setTimeout(r, 1000));
       setSuccess(true);
       toast.success('Password updated!');
-    } catch {
-      toast.error('Failed to reset password');
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to reset password. Please try again.'));
     } finally {
       setLoading(false);
     }

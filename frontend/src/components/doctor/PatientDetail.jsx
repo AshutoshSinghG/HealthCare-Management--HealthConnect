@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatDate';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { usePatientDetail, useFlagUnsuitableMedicine, useRemoveUnsuitableFlag } from '../../hooks/useDoctors';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -105,14 +106,14 @@ const PatientDetail = () => {
       setNewFlag({ name: '', reason: '', severity: 'MODERATE' });
       setFlagModal(false);
       toast.success('Medicine flagged as unsuitable');
-    } catch { toast.error('Failed to flag medicine'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to flag medicine.')); }
   };
 
   const handleRemoveFlag = async (medId) => {
     try {
       await removeFlagMutation.mutateAsync(medId);
       toast.success('Medicine flag removed');
-    } catch { toast.error('Failed to remove flag'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to remove flag.')); }
   };
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;

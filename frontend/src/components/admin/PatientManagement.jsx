@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { formatDate } from '../../utils/formatDate';
 import toast from 'react-hot-toast';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useAdminPatients, useUpdatePatient, useSoftDeletePatient, useRestorePatient } from '../../hooks/useAdmin';
 
 const PatientManagement = () => {
@@ -37,14 +38,14 @@ const PatientManagement = () => {
     try {
       await softDeleteMutation.mutateAsync(id);
       toast.success('Patient soft deleted');
-    } catch { toast.error('Failed to delete patient'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to delete patient.')); }
   };
 
   const restore = async (id) => {
     try {
       await restoreMutation.mutateAsync(id);
       toast.success('Patient restored');
-    } catch { toast.error('Failed to restore patient'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to restore patient.')); }
   };
 
   const openEdit = (p) => { setEditForm({ name: p.name, email: p.email, phone: p.phone }); setEditModal(p); };
@@ -54,7 +55,7 @@ const PatientManagement = () => {
       await updateMutation.mutateAsync({ id: editModal._id, ...editForm });
       setEditModal(null);
       toast.success('Patient details updated');
-    } catch { toast.error('Failed to update patient'); }
+    } catch (err) { toast.error(extractErrorMessage(err, 'Failed to update patient.')); }
   };
 
   if (isLoading) {
