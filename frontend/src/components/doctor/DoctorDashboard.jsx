@@ -15,6 +15,10 @@ const statusColors = { ONGOING: 'info', FOLLOW_UP: 'warning', RESOLVED: 'success
 const DoctorDashboard = () => {
   const { data, isLoading, isError } = useDoctorDashboard();
 
+  // Fetch rating separately. It must be called unconditionally at the top level!
+  const doctorId = data?.profile?._id;
+  const { data: ratingData } = useDoctorAverageRating(doctorId);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -41,8 +45,6 @@ const DoctorDashboard = () => {
   const { profile, stats, recentPatients, pendingFollowups, todaysAppointments } = data;
   const doctorName = `Dr. ${profile.firstName} ${profile.lastName}`;
 
-  // Fetch rating separately so it doesn't block the dashboard if it takes longer
-  const { data: ratingData } = useDoctorAverageRating(profile._id);
   const avgRating = ratingData?.averageRating || 0;
 
   const statCards = [
