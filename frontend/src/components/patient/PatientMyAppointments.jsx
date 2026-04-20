@@ -12,6 +12,8 @@ import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { useMyAppointments, useCancelAppointment } from '../../hooks/usePatients';
+import { useSubmitRating, useCheckRating } from '../../hooks/useRatings';
+import StarRating from '../../components/ui/StarRating';
 
 const tabs = [
   { id: 'upcoming', label: 'Upcoming' },
@@ -26,6 +28,18 @@ const PatientMyAppointments = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+
+  // Rating state
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+
+  const submitRatingMutation = useSubmitRating();
+
+  // Check if selected appointment is already rated
+  const { data: ratingCheck, isLoading: isCheckingRating } = useCheckRating(
+    ratingModalOpen && selectedAppointment ? selectedAppointment.id : null
+  );
 
   // Derived
   const filteredAppointments = useMemo(() => {
@@ -46,6 +60,26 @@ const PatientMyAppointments = () => {
       setActiveTab('cancelled');
     } catch (err) {
       toast.error(extractErrorMessage(err, 'Failed to cancel appointment.'));
+    }
+  };
+
+  const handleRatingSubmit = async (e) => {
+    e.preventDefault();
+    if (ratingValue === 0) {
+      toast.error('Please select a star rating');
+      return;
+    }
+
+    try {
+      await submitRatingMutation.mutateAsync({
+        appointmentSlotId: selectedAppointment.id,
+        rating: ratingValue,
+        review: reviewText,
+      });
+      toast.success('Thank you for your feedback!');
+      setRatingModalOpen(false);
+    } catch (err) {
+      toast.error(extractErrorMessage(err, 'Failed to submit rating.'));
     }
   };
 
@@ -202,6 +236,19 @@ const PatientMyAppointments = () => {
                               View Record
                             </Button>
                           </Link>
+                          <Button 
+                            variant="primary" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => {
+                              setSelectedAppointment(appt);
+                              setRatingModalOpen(true);
+                              setRatingValue(0);
+                              setReviewText('');
+                            }}
+                          >
+                            Rate Doctor
+                          </Button>
                         </>
                       )}
 
@@ -232,6 +279,67 @@ const PatientMyAppointments = () => {
             <Button variant="ghost" className="flex-1" onClick={() => setCancelModalOpen(false)} disabled={cancelMutation.isPending}>Keep it</Button>
             <Button className="flex-1 bg-danger-500 hover:bg-danger-600 text-white border-0" onClick={confirmCancel} loading={cancelMutation.isPending}>Yes, Cancel</Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Rating Modal */}
+      <Modal isOpen={ratingModalOpen} onClose={() => !submitRatingMutation.isPending && setRatingModalOpen(false)} title="Rate Your Doctor" size="sm">
+        <div className="py-2 space-y-4">
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-bold text-surface-800">How was your visit?</h3>
+            <p className="text-sm text-surface-500">with {selectedAppointment?.doctor}</p>
+          </div>
+
+          {isCheckingRating ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>
+          ) : ratingCheck?.hasRated ? (
+            <div className="text-center py-6 bg-success-50 rounded-xl border border-success-100">
+              <CheckCircle className="w-12 h-12 text-success-500 mx-auto mb-3" />
+              <h4 className="font-bold text-surface-800">You already rated this visit</h4>
+              <div className="flex justify-center mt-3">
+                <StarRating rating={ratingCheck.rating.rating} readonly size="lg" />
+              </div>
+              {ratingCheck.rating.review && (
+                <p className="mt-4 text-sm text-surface-600 italic">"{ratingCheck.rating.review}"</p>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleRatingSubmit} className="space-y-5">
+              <div className="flex flex-col items-center">
+                <StarRating 
+                  rating={ratingValue} 
+                  setRating={setRatingValue} 
+                  size="xl" 
+                />
+                {ratingValue > 0 && (
+                  <span className="text-sm font-medium text-warning-600 mt-2">
+                    {['Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][ratingValue - 1]}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-surface-700">Add a written review (optional)</label>
+                <textarea
+                  className="input-base min-h-[100px] resize-none"
+                  placeholder="Share details of your experience..."
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  maxLength={500}
+                />
+                <p className="text-xs text-surface-400 text-right">{reviewText.length}/500</p>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                loading={submitRatingMutation.isPending}
+                disabled={ratingValue === 0}
+              >
+                Submit Feedback
+              </Button>
+            </form>
+          )}
         </div>
       </Modal>
 

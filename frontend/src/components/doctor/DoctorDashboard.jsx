@@ -7,6 +7,8 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { formatDate } from '../../utils/formatDate';
 import { useDoctorDashboard } from '../../hooks/useDoctors';
+import { useDoctorAverageRating } from '../../hooks/useRatings';
+import { Star } from 'lucide-react';
 
 const statusColors = { ONGOING: 'info', FOLLOW_UP: 'warning', RESOLVED: 'success', REFERRED: 'warning' };
 
@@ -38,6 +40,10 @@ const DoctorDashboard = () => {
 
   const { profile, stats, recentPatients, pendingFollowups, todaysAppointments } = data;
   const doctorName = `Dr. ${profile.firstName} ${profile.lastName}`;
+
+  // Fetch rating separately so it doesn't block the dashboard if it takes longer
+  const { data: ratingData } = useDoctorAverageRating(profile._id);
+  const avgRating = ratingData?.averageRating || 0;
 
   const statCards = [
     { label: 'Today\'s Appts', value: stats.todayAppointmentsCount || 0, icon: CalendarCheck, color: 'from-blue-500 to-blue-600' },
@@ -249,6 +255,10 @@ const DoctorDashboard = () => {
             <Link to="/doctor/slots" className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 transition-colors">
               <Calendar className="w-5 h-5 text-violet-500" />
               <span className="text-sm text-surface-700">Manage appointment slots</span>
+            </Link>
+            <Link to="/doctor/ratings" className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 transition-colors">
+              <Star className="w-5 h-5 text-warning-500" />
+              <span className="text-sm text-surface-700">View patient ratings</span>
             </Link>
           </div>
         </Card>

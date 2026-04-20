@@ -2,19 +2,24 @@ const DoctorSlot = require('../models/DoctorSlot');
 const ChatMessage = require('../models/ChatMessage');
 const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
+const logger = require('../utils/logger');
 
 /**
- * Check if the current time is within a slot's time window on the correct date.
+ * Check if the current time is within a slot's time window.
+ * Uses startDateTime/endDateTime if available, otherwise falls back to
+ * date + from/to string comparison.
  */
 const isTimeWithinSlot = (slot) => {
   const now = new Date();
 
-  // Primary exact match using startDateTime and endDateTime
+  // Primary: use exact startDateTime and endDateTime if both are set
   if (slot.startDateTime && slot.endDateTime) {
-    return now >= new Date(slot.startDateTime) && now <= new Date(slot.endDateTime);
+    const start = new Date(slot.startDateTime);
+    const end = new Date(slot.endDateTime);
+    return now >= start && now <= end;
   }
 
-  // Fallback for older slots lacking startDateTime/endDateTime
+  // Fallback: compare date string + from/to time strings
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -22,9 +27,7 @@ const isTimeWithinSlot = (slot) => {
 
   if (slot.date !== todayStr) return false;
 
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTotalMins = currentHour * 60 + currentMinute;
+  const currentTotalMins = now.getHours() * 60 + now.getMinutes();
 
   const [fromHour, fromMin] = slot.from.split(':').map(Number);
   const fromTotalMins = fromHour * 60 + fromMin;
@@ -32,17 +35,58 @@ const isTimeWithinSlot = (slot) => {
   const [toHour, toMin] = slot.to.split(':').map(Number);
   const toTotalMins = toHour * 60 + toMin;
 
+  // Handle midnight crossing (e.g. from 23:30, to 00:00)
+  if (toTotalMins <= fromTotalMins) {
+    // Slot crosses midnight: valid if current >= from OR current <= to
+    return currentTotalMins >= fromTotalMins || currentTotalMins <= toTotalMins;
+  }
+
   return currentTotalMins >= fromTotalMins && currentTotalMins <= toTotalMins;
+};
+
+/**
+ * Compute startDateTime and endDateTime from slot.date + slot.from/slot.to
+ * and save them if missing. This backfills old slots.
+ */
+const ensureDateTimeFields = async (slot) => {
+  if (slot.startDateTime && slot.endDateTime) return slot;
+
+  const [y, mo, d] = slot.date.split('-').map(Number);
+  const [fh, fm] = slot.from.split(':').map(Number);
+  const [th, tm] = slot.to.split(':').map(Number);
+
+  const startDT = new Date(y, mo - 1, d, fh, fm, 0);
+  let endDT = new Date(y, mo - 1, d, th, tm, 0);
+
+  // Handle midnight crossing
+  if (endDT <= startDT) {
+    endDT.setDate(endDT.getDate() + 1);
+  }
+
+  slot.startDateTime = startDT;
+  slot.endDateTime = endDT;
+
+  try {
+    await slot.save();
+    logger.info(`Backfilled DateTime for slot ${slot._id}`);
+  } catch (err) {
+    logger.error(`Failed to backfill DateTime for slot ${slot._id}: ${err.message}`);
+  }
+
+  return slot;
 };
 
 /**
  * Validates if a user can access a specific chat room (slot).
  */
 const validateChatAccess = async (slotId, userId, userRole) => {
-  const slot = await DoctorSlot.findById(slotId);
+  let slot = await DoctorSlot.findById(slotId);
   if (!slot || !['booked', 'pending'].includes(slot.status)) {
     return { valid: false, message: 'Invalid or unbooked appointment slot.' };
   }
+
+  // Ensure startDateTime/endDateTime are present
+  slot = await ensureDateTimeFields(slot);
 
   // Check matching participants
   if (userRole === 'DOCTOR') {
@@ -68,35 +112,53 @@ const validateChatAccess = async (slotId, userId, userRole) => {
 };
 
 /**
- * Get active chats (appointments currently happening)
+ * Get active chats (appointments currently happening).
+ * Fetches all booked/pending slots for today and filters by time window.
  */
 const getActiveChats = async (userId, userRole) => {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Also check yesterday for midnight-crossing slots
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
   let filter = { 
     status: { $in: ['booked', 'pending'] },
     $or: [
+      // Slots with proper DateTime fields that cover now
       { startDateTime: { $lte: now }, endDateTime: { $gte: now } },
-      { date: todayStr } // Fallback for older records
+      // Slots for today (will be time-filtered below)
+      { date: todayStr },
+      // Slots from yesterday that might cross midnight
+      { date: yesterdayStr },
     ]
   };
 
   if (userRole === 'DOCTOR') {
     const doctor = await Doctor.findOne({ userId });
-    filter.doctorId = doctor ? doctor._id : null;
+    if (!doctor) return [];
+    filter.doctorId = doctor._id;
   } else if (userRole === 'PATIENT') {
     const patient = await Patient.findOne({ userId });
-    filter.patientId = patient ? patient._id.toString() : null;
+    if (!patient) return [];
+    filter.patientId = patient._id.toString();
   } else {
     return [];
   }
 
+  logger.info(`getActiveChats filter: ${JSON.stringify(filter)}`);
+
   const slots = await DoctorSlot.find(filter).populate('doctorId', 'firstName lastName specialisation profilePicture');
   
+  logger.info(`getActiveChats found ${slots.length} candidate slots`);
+
   // Filter by time window and map data
   const activeChats = [];
-  for (const slot of slots) {
+  for (let slot of slots) {
+    // Backfill DateTime fields if missing
+    slot = await ensureDateTimeFields(slot);
+
     if (isTimeWithinSlot(slot)) {
       let partnerName = '';
       let partnerId = '';
@@ -123,6 +185,7 @@ const getActiveChats = async (userId, userRole) => {
     }
   }
 
+  logger.info(`getActiveChats returning ${activeChats.length} active chats`);
   return activeChats;
 };
 
@@ -134,10 +197,12 @@ const getChatHistory = async (userId, userRole) => {
 
   if (userRole === 'DOCTOR') {
     const doctor = await Doctor.findOne({ userId });
-    filter.doctorId = doctor ? doctor._id : null;
+    if (!doctor) return [];
+    filter.doctorId = doctor._id;
   } else if (userRole === 'PATIENT') {
     const patient = await Patient.findOne({ userId });
-    filter.patientId = patient ? patient._id.toString() : null;
+    if (!patient) return [];
+    filter.patientId = patient._id.toString();
   } else {
     return [];
   }
@@ -175,8 +240,6 @@ const getChatHistory = async (userId, userRole) => {
  * Get messages for a specific chat
  */
 const getMessages = async (slotId, userId, userRole) => {
-  // Can either be active or history, so we don't strictly enforce time window here,
-  // but we must enforce authorization.
   const slot = await DoctorSlot.findById(slotId);
   if (!slot) {
     const err = new Error('Slot not found');

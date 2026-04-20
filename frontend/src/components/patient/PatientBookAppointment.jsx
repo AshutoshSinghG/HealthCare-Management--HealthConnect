@@ -217,9 +217,10 @@ const PatientBookAppointment = () => {
                     <p className="text-sm text-surface-800 font-medium">{selectedDoctor.education}</p>
                     <div className="flex items-center justify-center text-sm">
                       <span className="text-surface-500">Rating -</span>
-                      <span className="font-medium text-surface-800 flex items-center gap-1">
+                      <span className="font-medium text-surface-800 flex items-center gap-1 mx-1">
                         <Star className="w-3.5 h-3.5 text-warning-500 fill-warning-500" /> {selectedDoctor.rating}
                       </span>
+                      <span className="text-surface-500">({selectedDoctor.reviews} reviews)</span>
                     </div>
                   </div>
 

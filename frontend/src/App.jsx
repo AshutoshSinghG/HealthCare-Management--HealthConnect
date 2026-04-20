@@ -32,6 +32,7 @@ import DoctorEditTreatment from './pages/doctor/EditTreatment';
 import DoctorProfileEdit from './pages/doctor/ProfileEdit';
 import DoctorSlots from './pages/doctor/Slots';
 import DoctorChat from './pages/doctor/Chat';
+import DoctorRatings from './components/doctor/DoctorRatings';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -118,6 +119,7 @@ function App() {
           <Route path="/doctor/profile" element={<DoctorProfileEdit />} />
           <Route path="/doctor/slots" element={<DoctorSlots />} />
           <Route path="/doctor/chat" element={<DoctorChat />} />
+          <Route path="/doctor/ratings" element={<DoctorRatings />} />
         </Route>
 
         {/* Admin Portal */}

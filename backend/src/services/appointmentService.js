@@ -121,22 +121,12 @@ const bookAppointment = async (userId, { slotId, reason }) => {
       throw err;
     }
 
-    // Determine real Datetime considering midnight rollover
-    const avail = await DoctorAvailability.findOne({ doctorId });
-    const shiftStartTime = avail ? avail.startTime : '09:00';
-    
+    // Compute startDateTime and endDateTime simply from date + fromTime
     const [baseY, baseM, baseD] = date.split('-').map(Number);
     const [h, m] = fromTime.split(':').map(Number);
-    const [sh, sm] = shiftStartTime.split(':').map(Number);
     
-    // Create base slot time
     const startDateTime = new Date(baseY, baseM - 1, baseD, h, m, 0);
-    // If slot hour is less than shift start hour (or same hour and less minute), it rolled over to the next day
-    if (h < sh || (h === sh && m < sm)) {
-      startDateTime.setDate(startDateTime.getDate() + 1);
-    }
-    
-    // Calculate end time (30 minutes later)
+    // End time is 30 minutes after start
     const endDateTime = new Date(startDateTime.getTime() + 30 * 60000);
     const toTime = `${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}`;
 
@@ -198,6 +188,25 @@ const bookAppointment = async (userId, { slotId, reason }) => {
   slot.patient = `${patient.firstName} ${patient.lastName}`;
   slot.reason = reason || '';
   slot.status = 'pending';
+
+  // Ensure startDateTime and endDateTime are set (they may be missing on older slots)
+  if (!slot.startDateTime || !slot.endDateTime) {
+    const [y, mo, d] = slot.date.split('-').map(Number);
+    const [fh, fm] = slot.from.split(':').map(Number);
+    const [th, tm] = slot.to.split(':').map(Number);
+
+    const startDT = new Date(y, mo - 1, d, fh, fm, 0);
+    let endDT = new Date(y, mo - 1, d, th, tm, 0);
+
+    // Handle midnight crossing (e.g. from 23:30 to 00:00)
+    if (endDT <= startDT) {
+      endDT.setDate(endDT.getDate() + 1);
+    }
+
+    slot.startDateTime = startDT;
+    slot.endDateTime = endDT;
+  }
+
   await slot.save();
 
   return slot;

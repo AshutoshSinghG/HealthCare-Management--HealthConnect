@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Clock, Calendar, CheckCircle, Loader2 } from 'lucide-react';
+import { MessageCircle, Clock, Calendar, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import { useActiveChats, useChatHistory } from '../../hooks/useChat';
@@ -12,8 +12,8 @@ const LiveChat = () => {
   const [activeChatSlot, setActiveChatSlot] = useState(null); // The slot the user is actively chatting in
   const [viewHistorySlot, setViewHistorySlot] = useState(null); // The slot selected for viewing history
 
-  const { data: activeChats = [], isLoading: isActiveLoading } = useActiveChats();
-  const { data: history = [], isLoading: isHistoryLoading } = useChatHistory();
+  const { data: activeChats = [], isLoading: isActiveLoading, error: activeError } = useActiveChats();
+  const { data: history = [], isLoading: isHistoryLoading, error: historyError } = useChatHistory();
 
   return (
     <div className="space-y-6">
@@ -45,14 +45,24 @@ const LiveChat = () => {
                   </div>
                 </div>
 
-                {isActiveLoading ? (
+                {activeError ? (
+                  <Card>
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <AlertCircle className="w-12 h-12 text-danger-400 mb-3" />
+                      <h3 className="text-surface-800 font-medium">Error loading chats</h3>
+                      <p className="text-sm text-surface-500 mt-1">
+                        {activeError?.response?.data?.message || activeError?.message || 'Could not fetch active chats. Please try again.'}
+                      </p>
+                    </div>
+                  </Card>
+                ) : isActiveLoading ? (
                   <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
                 ) : activeChats.length === 0 ? (
                   <Card>
                     <div className="flex flex-col items-center justify-center py-10 text-center">
                       <Clock className="w-12 h-12 text-surface-300 mb-3" />
-                      <h3 className="text-surface-800 font-medium">No active appointments</h3>
-                      <p className="text-sm text-surface-500 mt-1">There are no active appointments available for chat at this time.</p>
+                      <h3 className="text-surface-800 font-medium">No active appointments available for chat at this time</h3>
+                      <p className="text-sm text-surface-500 mt-1">Chat will appear here when you have a booked appointment that covers the current time.</p>
                     </div>
                   </Card>
                 ) : (
@@ -93,7 +103,17 @@ const LiveChat = () => {
         {tab === 'history' && (
           <div>
             {!viewHistorySlot ? (
-              isHistoryLoading ? (
+              historyError ? (
+                <Card>
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <AlertCircle className="w-12 h-12 text-danger-400 mb-3" />
+                    <h3 className="text-surface-800 font-medium">Error loading chat history</h3>
+                    <p className="text-sm text-surface-500 mt-1">
+                      {historyError?.response?.data?.message || historyError?.message || 'Could not fetch history.'}
+                    </p>
+                  </div>
+                </Card>
+              ) : isHistoryLoading ? (
                 <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary-500" /></div>
               ) : history.length === 0 ? (
                 <Card><p className="text-center text-surface-400 py-8">No chat history available.</p></Card>

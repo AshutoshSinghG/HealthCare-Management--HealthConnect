@@ -71,6 +71,8 @@ app.use('/api/doctor-slots', slotRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/public', publicDoctorRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/ratings', require('./routes/ratingRoutes')); // Added ratings routes
+
 // --------------- Swagger Documentation ---------------
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

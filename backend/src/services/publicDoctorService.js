@@ -57,16 +57,20 @@ const listDoctors = async (query) => {
   const availMap = {};
   availabilities.forEach(a => { availMap[a.doctorId.toString()] = a; });
 
+  const ratingService = require('./ratingService');
+  const ratingMap = await ratingService.getMultipleDoctorAverages(doctorIds);
+
   return doctors.map(doc => {
     const avail = availMap[doc._id.toString()];
+    const ratingData = ratingMap[doc._id.toString()] || { averageRating: 0, totalReviews: 0 };
     return {
       id: doc._id,
       name: `Dr. ${doc.firstName} ${doc.lastName}`,
       specialty: doc.specialisation || '',
       illness: [],
       fee: avail?.consultationFee || 0,
-      rating: 4.5,
-      reviews: 0,
+      rating: ratingData.averageRating,
+      reviews: ratingData.totalReviews,
       exp: doc.yearsOfExperience || 0,
       hospital: doc.department || '',
       education: doc.qualifications || '',

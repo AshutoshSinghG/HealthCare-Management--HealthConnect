@@ -28,48 +28,74 @@ const ChatWindow = ({ slot, onClose }) => {
   useEffect(() => {
     if (pastMessages) {
       setMessages(pastMessages);
-      scrollToBottom();
+      setTimeout(scrollToBottom, 100);
     }
   }, [pastMessages]);
 
   useEffect(() => {
     const token = getToken();
     if (!token) {
-      setErrorMsg('Authentication error');
+      setErrorMsg('Authentication error - no token found');
       return;
     }
+
+    console.log('[ChatWindow] Connecting to socket at:', SOCKET_URL);
+    console.log('[ChatWindow] Joining slotId:', slot.slotId);
 
     const newSocket = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
 
     newSocket.on('connect', () => {
+      console.log('[ChatWindow] Socket connected, joining chat room...');
       newSocket.emit('joinChat', { slotId: slot.slotId });
     });
 
-    newSocket.on('joined', () => {
+    newSocket.on('connect_error', (err) => {
+      console.error('[ChatWindow] Socket connect_error:', err.message);
+      setErrorMsg(`Connection failed: ${err.message}`);
+    });
+
+    newSocket.on('joined', (data) => {
+      console.log('[ChatWindow] Successfully joined room:', data);
       setIsConnected(true);
       setErrorMsg(null);
     });
 
     newSocket.on('newMessage', (msg) => {
-      setMessages((prev) => [...prev, msg]);
-      scrollToBottom();
+      setMessages((prev) => {
+        // Prevent duplicates
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+      setTimeout(scrollToBottom, 100);
     });
 
     newSocket.on('error', (err) => {
-      console.error('Socket error:', err);
-      setErrorMsg(err);
-      toast.error(err);
-      if (err.includes('only available during')) {
-        setIsConnected(false); // Disconnect visually if time expired
+      console.error('[ChatWindow] Socket error event:', err);
+      const errStr = typeof err === 'string' ? err : (err?.message || 'Unknown error');
+      setErrorMsg(errStr);
+      toast.error(errStr);
+      if (errStr.includes('only available during') || errStr.includes('time window')) {
+        setIsConnected(false);
+      }
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('[ChatWindow] Socket disconnected:', reason);
+      if (reason !== 'io client disconnect') {
+        setIsConnected(false);
       }
     });
 
     setSocket(newSocket);
 
     return () => {
+      console.log('[ChatWindow] Cleaning up socket connection');
       newSocket.disconnect();
     };
   }, [slot.slotId]);
