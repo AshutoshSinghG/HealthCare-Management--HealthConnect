@@ -29,7 +29,11 @@ const LoginForm = ({ onSubmit, loading }) => {
       className="space-y-5"
     >
       <Input
-        label="Email Address"
+        label={
+          <>
+            Email Address <span className="text-danger-500">*</span>
+          </>
+        }
         type="email"
         icon={Mail}
         placeholder="you@hospital.com"
@@ -40,7 +44,11 @@ const LoginForm = ({ onSubmit, loading }) => {
       <div>
         <div className="relative">
           <Input
-            label="Password"
+            label={
+              <>
+                Password <span className="text-danger-500">*</span>
+              </>
+            }
             type={showPassword ? 'text' : 'password'}
             icon={Lock}
             placeholder="Enter your password"

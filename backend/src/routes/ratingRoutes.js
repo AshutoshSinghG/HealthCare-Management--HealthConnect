@@ -2,6 +2,8 @@ const router = require('express').Router();
 const ratingController = require('../controllers/ratingController');
 const authenticate = require('../middlewares/authMiddleware');
 const authorise = require('../middlewares/roleMiddleware');
+const validate = require('../middlewares/validateMiddleware');
+const { submitRatingSchema } = require('../validators/ratingValidator');
 
 router.use(authenticate);
 
@@ -12,7 +14,7 @@ router.use(authenticate);
  *     tags: [Ratings]
  *     summary: Submit a doctor rating (Patient only)
  */
-router.post('/', authorise('PATIENT'), ratingController.submitRating);
+router.post('/', authorise('PATIENT'), validate(submitRatingSchema), ratingController.submitRating);
 
 /**
  * @swagger

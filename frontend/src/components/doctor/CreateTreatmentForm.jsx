@@ -85,7 +85,7 @@ const CreateTreatmentForm = () => {
           <h3 className="section-title mb-4">Visit Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="block text-sm font-medium text-surface-700">Select Patient</label>
+              <label className="block text-sm font-medium text-surface-700">Select Patient<span className="text-danger-500">*</span></label>
               <select {...register('patientId')} className="input-base">
                 <option value="">Select patient...</option>
                 {patients.map(p => (
@@ -96,7 +96,7 @@ const CreateTreatmentForm = () => {
             </div>
             <Input label="Visit Date" type="date" error={errors.visitDate?.message} {...register('visitDate')} />
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Outcome Status</label>
+              <label className="block text-sm font-medium text-surface-700">Outcome Status<span className="text-danger-500">*</span></label>
               <select {...register('outcome')} className="input-base">
                 <option value="">Select outcome...</option>
                 {TREATMENT_OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}

@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { usePatientProfile, useUpdatePatientProfile } from '../../hooks/usePatients';
+import { isValidPhone, isValidEmail, digitsOnly } from '../../utils/validators';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -19,6 +20,7 @@ const PatientProfileEdit = () => {
   const [form, setForm] = useState(null);
   const [newAllergy, setNewAllergy] = useState('');
   const [newCondition, setNewCondition] = useState('');
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (profile && !form) {
@@ -59,12 +61,25 @@ const PatientProfileEdit = () => {
     );
   }
 
-  const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const update = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+  };
   const updateAddress = (field, value) => setForm(prev => ({ ...prev, address: { ...prev.address, [field]: value } }));
-  const updateEmergency = (field, value) => setForm(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, [field]: value } }));
+  const updateEmergency = (field, value) => {
+    setForm(prev => ({ ...prev, emergencyContact: { ...prev.emergencyContact, [field]: value } }));
+    if (errors[`emergency_${field}`]) setErrors(prev => ({ ...prev, [`emergency_${field}`]: '' }));
+  };
 
   const addAllergy = () => {
-    if (!newAllergy.trim()) return;
+    if (!newAllergy.trim()) {
+      toast.error('Please enter an allergy name before adding');
+      return;
+    }
+    if (form.allergies.includes(newAllergy.trim())) {
+      toast.error('This allergy has already been added');
+      return;
+    }
     setForm(prev => ({ ...prev, allergies: [...prev.allergies, newAllergy.trim()] }));
     setNewAllergy('');
   };
@@ -72,14 +87,44 @@ const PatientProfileEdit = () => {
   const removeAllergy = (idx) => setForm(prev => ({ ...prev, allergies: prev.allergies.filter((_, i) => i !== idx) }));
 
   const addCondition = () => {
-    if (!newCondition.trim()) return;
+    if (!newCondition.trim()) {
+      toast.error('Please enter a condition name before adding');
+      return;
+    }
+    if (form.chronicConditions.includes(newCondition.trim())) {
+      toast.error('This condition has already been added');
+      return;
+    }
     setForm(prev => ({ ...prev, chronicConditions: [...prev.chronicConditions, newCondition.trim()] }));
     setNewCondition('');
   };
 
   const removeCondition = (idx) => setForm(prev => ({ ...prev, chronicConditions: prev.chronicConditions.filter((_, i) => i !== idx) }));
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (!form.name.trim() || form.name.trim().length < 2) {
+      newErrors.name = 'Full name is required (at least 2 characters)';
+    }
+    if (form.phone && !isValidPhone(form.phone)) {
+      newErrors.phone = 'Please enter a valid phone number (10-15 digits)';
+    }
+    if (form.email && !isValidEmail(form.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (form.emergencyContact.phone && !isValidPhone(form.emergencyContact.phone)) {
+      newErrors.emergency_phone = 'Please enter a valid emergency contact phone number';
+    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fix the highlighted errors before saving');
+    }
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
+    if (!validateForm()) return;
+
     const nameParts = form.name.trim().split(' ');
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || '';
@@ -108,6 +153,10 @@ const PatientProfileEdit = () => {
       toast.error(extractErrorMessage(err, 'Failed to update profile.'));
     }
   };
+
+  const inputError = (field) => errors[field] ? (
+    <p className="text-xs text-danger-500 mt-1">{errors[field]}</p>
+  ) : null;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -151,23 +200,31 @@ const PatientProfileEdit = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Full Name</label>
-              <input value={form.name} onChange={e => update('name', e.target.value)} className="input-base" />
+              <label className="block text-sm font-medium text-surface-700">Full Name <span className="text-danger-500">*</span></label>
+              <input value={form.name} onChange={e => update('name', e.target.value)}
+                className={`input-base ${errors.name ? 'border-danger-400 focus:ring-danger-500/20 focus:border-danger-500' : ''}`} />
+              {inputError('name')}
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Email Address</label>
-              <input value={form.email} onChange={e => update('email', e.target.value)} className="input-base" type="email" />
+              <label className="block text-sm font-medium text-surface-700">Email Address<span className="text-danger-500">*</span></label>
+              <input value={form.email} onChange={e => update('email', e.target.value)}
+                className={`input-base ${errors.email ? 'border-danger-400 focus:ring-danger-500/20 focus:border-danger-500' : ''}`} type="email" />
+              {inputError('email')}
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Phone Number</label>
-              <input value={form.phone} onChange={e => update('phone', e.target.value)} className="input-base" />
+              <label className="block text-sm font-medium text-surface-700">Phone Number<span className="text-danger-500">*</span></label>
+              <input value={form.phone}
+                onChange={e => update('phone', digitsOnly(e.target.value))}
+                className={`input-base ${errors.phone ? 'border-danger-400 focus:ring-danger-500/20 focus:border-danger-500' : ''}`}
+                type="tel" placeholder="e.g. 9876543210" maxLength={15} />
+              {inputError('phone')}
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Date of Birth</label>
+              <label className="block text-sm font-medium text-surface-700">Date of Birth<span className="text-danger-500">*</span></label>
               <input value={form.dob} onChange={e => update('dob', e.target.value)} className="input-base" type="date" />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Gender</label>
+              <label className="block text-sm font-medium text-surface-700">Gender<span className="text-danger-500">*</span></label>
               <select value={form.gender} onChange={e => update('gender', e.target.value)} className="input-base">
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -175,7 +232,7 @@ const PatientProfileEdit = () => {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Blood Group</label>
+              <label className="block text-sm font-medium text-surface-700">Blood Group<span className="text-danger-500">*</span></label>
               <select value={form.bloodGroup} onChange={e => update('bloodGroup', e.target.value)} className="input-base">
                 {bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
               </select>
@@ -195,7 +252,7 @@ const PatientProfileEdit = () => {
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-surface-700">Zip / Postal Code</label>
-                <input value={form.address.zipCode} onChange={e => updateAddress('zipCode', e.target.value)} className="input-base" placeholder="Zip Code" />
+                <input value={form.address.zipCode} onChange={e => updateAddress('zipCode', e.target.value)} className="input-base" placeholder="Zip Code" maxLength={10} />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-surface-700">Country</label>
@@ -226,7 +283,7 @@ const PatientProfileEdit = () => {
               ))}
             </div>
             <div className="flex gap-2">
-              <input value={newAllergy} onChange={e => setNewAllergy(e.target.value)} onKeyDown={e => e.key === 'Enter' && addAllergy()}
+              <input value={newAllergy} onChange={e => setNewAllergy(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addAllergy())}
                 className="input-base flex-1" placeholder="Add allergy (e.g., Sulfa drugs)" />
               <Button variant="outline" size="sm" icon={Plus} onClick={addAllergy}>Add</Button>
             </div>
@@ -244,7 +301,7 @@ const PatientProfileEdit = () => {
               ))}
             </div>
             <div className="flex gap-2">
-              <input value={newCondition} onChange={e => setNewCondition(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCondition()}
+              <input value={newCondition} onChange={e => setNewCondition(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCondition())}
                 className="input-base flex-1" placeholder="Add condition (e.g., Diabetes)" />
               <Button variant="outline" size="sm" icon={Plus} onClick={addCondition}>Add</Button>
             </div>
@@ -277,7 +334,11 @@ const PatientProfileEdit = () => {
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-surface-700">Contact Phone</label>
-              <input value={form.emergencyContact.phone} onChange={e => updateEmergency('phone', e.target.value)} className="input-base" />
+              <input value={form.emergencyContact.phone}
+                onChange={e => updateEmergency('phone', digitsOnly(e.target.value))}
+                className={`input-base ${errors.emergency_phone ? 'border-danger-400 focus:ring-danger-500/20 focus:border-danger-500' : ''}`}
+                type="tel" placeholder="e.g. 9876543210" maxLength={15} />
+              {inputError('emergency_phone')}
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-surface-700">Contact Address</label>

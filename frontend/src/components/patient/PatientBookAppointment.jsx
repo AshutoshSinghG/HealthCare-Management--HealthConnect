@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { usePublicDoctors, usePublicSpecialties, useDoctorSlots, useBookAppointment } from '../../hooks/usePatients';
+import { formatCardNumber, formatExpiry, digitsOnly, isValidCardNumber, isValidExpiry, isValidCVV, PATTERNS } from '../../utils/validators';
 
 // Helper: get today's date in local timezone as YYYY-MM-DD
 const getLocalDateString = (d = new Date()) => {
@@ -32,6 +33,10 @@ const PatientBookAppointment = () => {
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // Payment form state
+  const [payForm, setPayForm] = useState({ cardName: '', cardNumber: '', expiry: '', cvv: '' });
+  const [payErrors, setPayErrors] = useState({});
 
   // Data hooks
   const { data: doctors = [], isLoading: loadingDoctors } = usePublicDoctors({
@@ -71,10 +76,39 @@ const PatientBookAppointment = () => {
     setSelectedSlot(slot);
     setPaymentModalOpen(true);
     setPaymentSuccess(false);
+    setPayForm({ cardName: '', cardNumber: '', expiry: '', cvv: '' });
+    setPayErrors({});
+  };
+
+  const updatePayField = (field, value) => {
+    setPayForm(prev => ({ ...prev, [field]: value }));
+    if (payErrors[field]) setPayErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const validatePayment = () => {
+    const errs = {};
+    if (!payForm.cardName.trim()) errs.cardName = 'Cardholder name is required';
+    else if (!PATTERNS.lettersAndSpaces.test(payForm.cardName.trim())) errs.cardName = 'Name must contain only letters';
+
+    if (!payForm.cardNumber.trim()) errs.cardNumber = 'Card number is required';
+    else if (!isValidCardNumber(payForm.cardNumber)) errs.cardNumber = 'Please enter a valid 16-digit card number';
+
+    if (!payForm.expiry.trim()) errs.expiry = 'Expiry date is required';
+    else if (!isValidExpiry(payForm.expiry)) errs.expiry = 'Invalid or expired date (MM/YY)';
+
+    if (!payForm.cvv.trim()) errs.cvv = 'CVV is required';
+    else if (!isValidCVV(payForm.cvv)) errs.cvv = 'CVV must be 3 digits';
+
+    setPayErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handlePayment = async (e) => {
     e.preventDefault();
+    if (!validatePayment()) {
+      toast.error('Please fill all payment details correctly');
+      return;
+    }
     try {
       await bookMutation.mutateAsync({
         slotId: selectedSlot.id,
@@ -382,21 +416,34 @@ const PatientBookAppointment = () => {
                 <CreditCard className="w-4 h-4 text-surface-500" /> Payment Details
               </h4>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-surface-700">Cardholder Name</label>
-                <input required type="text" className="input-base" placeholder="Enter cardholder name" />
+                <label className="text-xs font-medium text-surface-700">Cardholder Name <span className="text-danger-500">*</span></label>
+                <input type="text" className={`input-base ${payErrors.cardName ? 'border-danger-400' : ''}`}
+                  placeholder="Enter cardholder name" value={payForm.cardName}
+                  onChange={e => updatePayField('cardName', e.target.value)} />
+                {payErrors.cardName && <p className="text-xs text-danger-500">{payErrors.cardName}</p>}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-surface-700">Card Number</label>
-                <input required type="text" className="input-base" placeholder="•••• •••• •••• ••••" maxLength={19} />
+                <label className="text-xs font-medium text-surface-700">Card Number <span className="text-danger-500">*</span></label>
+                <input type="text" className={`input-base ${payErrors.cardNumber ? 'border-danger-400' : ''}`}
+                  placeholder="1234 5678 9012 3456" maxLength={19}
+                  value={payForm.cardNumber}
+                  onChange={e => updatePayField('cardNumber', formatCardNumber(e.target.value))} />
+                {payErrors.cardNumber && <p className="text-xs text-danger-500">{payErrors.cardNumber}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-surface-700">Expiry (MM/YY)</label>
-                  <input required type="text" className="input-base" placeholder="MM/YY" maxLength={5} />
+                  <label className="text-xs font-medium text-surface-700">Expiry (MM/YY) <span className="text-danger-500">*</span></label>
+                  <input type="text" className={`input-base ${payErrors.expiry ? 'border-danger-400' : ''}`}
+                    placeholder="MM/YY" maxLength={5} value={payForm.expiry}
+                    onChange={e => updatePayField('expiry', formatExpiry(e.target.value))} />
+                  {payErrors.expiry && <p className="text-xs text-danger-500">{payErrors.expiry}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-surface-700">CVV</label>
-                  <input required type="password" className="input-base" placeholder="•••" maxLength={3} />
+                  <label className="text-xs font-medium text-surface-700">CVV <span className="text-danger-500">*</span></label>
+                  <input type="password" className={`input-base ${payErrors.cvv ? 'border-danger-400' : ''}`}
+                    placeholder="•••" maxLength={3} value={payForm.cvv}
+                    onChange={e => updatePayField('cvv', digitsOnly(e.target.value))} />
+                  {payErrors.cvv && <p className="text-xs text-danger-500">{payErrors.cvv}</p>}
                 </div>
               </div>
             </div>

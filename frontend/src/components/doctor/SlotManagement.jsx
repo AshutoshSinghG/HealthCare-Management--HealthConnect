@@ -149,6 +149,22 @@ const SlotManagement = () => {
   const deleteSlot = id => { deleteSlotMutation.mutate(id, { onSuccess: () => toast.success('Slot deleted'), onError: (err) => toast.error(extractErrorMessage(err, 'Failed to delete slot.')) }); };
 
   const saveAvailability = () => {
+    if (!tempAvail.startTime || !tempAvail.endTime) {
+      toast.error('Start time and end time are required');
+      return;
+    }
+    if (tempAvail.startTime === tempAvail.endTime) {
+      toast.error('Start time and end time cannot be the same');
+      return;
+    }
+    if (tempAvail.consultationFee === '' || Number(tempAvail.consultationFee) < 0) {
+      toast.error('Consultation fee must be ₹0 or more');
+      return;
+    }
+    if (!tempAvail.workingDays || tempAvail.workingDays.length === 0) {
+      toast.error('Please select at least one working day');
+      return;
+    }
     updateAvailMutation.mutate(tempAvail, {
       onSuccess: () => { setSettingsOpen(false); toast.success('Availability updated'); },
       onError: (err) => toast.error(extractErrorMessage(err, 'Failed to update availability.')),
@@ -157,6 +173,8 @@ const SlotManagement = () => {
 
   const addNewSlot = () => {
     if (!newSlot.date) { toast.error('Date is required'); return; }
+    if (!newSlot.from || !newSlot.to) { toast.error('Start and end time are required'); return; }
+    if (newSlot.from >= newSlot.to) { toast.error('End time must be after start time'); return; }
     createSlotMutation.mutate(newSlot, {
       onSuccess: () => {
         setNewSlot({ date: todayStr, from: '09:00', to: '09:30', patient: '', patientId: '', reason: '' });
@@ -474,7 +492,9 @@ const SlotManagement = () => {
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-surface-700">Consultation Fee (₹)</label>
-            <input type="number" min="0" value={tempAvail.consultationFee} onChange={e => setTempAvail(p => ({ ...p, consultationFee: Number(e.target.value) }))} className="input-base" />
+            <input type="number" min="0" value={tempAvail.consultationFee}
+              onChange={e => { const v = Math.max(0, Number(e.target.value) || 0); setTempAvail(p => ({ ...p, consultationFee: v })); }}
+              className="input-base" placeholder="e.g. 500" />
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-surface-700">Working Days</label>

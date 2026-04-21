@@ -18,12 +18,16 @@ const updatePatientSchema = Joi.object({
   bloodGroup: Joi.string().valid('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-').optional().messages({
     'any.only': 'Blood group must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-',
   }),
-  phoneNumber: Joi.string().trim().optional(),
+  phoneNumber: Joi.string().trim().pattern(/^\d{10,15}$/).optional().messages({
+    'string.pattern.base': 'Phone number must be 10-15 digits',
+  }),
   address: Joi.object({
     street: Joi.string().allow('').optional(),
     city: Joi.string().allow('').optional(),
     state: Joi.string().allow('').optional(),
-    zipCode: Joi.string().allow('').optional(),
+    zipCode: Joi.string().allow('').pattern(/^[a-zA-Z0-9\s\-]{3,10}$/).optional().messages({
+      'string.pattern.base': 'Zip/postal code must be 3-10 alphanumeric characters',
+    }),
     country: Joi.string().allow('').optional(),
   }).optional(),
   emergencyContactName: Joi.string().allow('').optional(),

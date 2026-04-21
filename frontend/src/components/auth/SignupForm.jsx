@@ -11,7 +11,7 @@ import Button from '../ui/Button';
 const signupSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(10, 'Please enter a valid phone number').optional().or(z.literal('')),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   role: z.enum(['PATIENT', 'DOCTOR'], { required_error: 'Please select a role' }),
@@ -75,7 +75,11 @@ const SignupForm = ({ onSubmit, loading }) => {
       className="space-y-4"
     >
       <Input
-        label="Full Name"
+        label={
+          <>
+            Full Name <span className="text-danger-500">*</span>
+          </>
+        }
         type="text"
         icon={User}
         placeholder="John Doe"
@@ -84,7 +88,11 @@ const SignupForm = ({ onSubmit, loading }) => {
       />
 
       <Input
-        label="Email Address"
+        label={
+          <>
+            Email Address <span className="text-danger-500">*</span>
+          </>
+        }
         type="email"
         icon={Mail}
         placeholder="you@hospital.com"
@@ -93,7 +101,11 @@ const SignupForm = ({ onSubmit, loading }) => {
       />
 
       <Input
-        label="Phone Number"
+        label={
+          <>
+            Phone Number <span className="text-danger-500">*</span>
+          </>
+        }
         type="tel"
         icon={Phone}
         placeholder="+1 (555) 000-0000"
@@ -102,7 +114,7 @@ const SignupForm = ({ onSubmit, loading }) => {
       />
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-surface-700">I am a</label>
+        <label className="block text-sm font-medium text-surface-700">I am a <span className="text-danger-500">*</span></label>
         <div className="grid grid-cols-2 gap-3">
           <label className="relative">
             <input type="radio" value="PATIENT" {...register('role')} className="peer sr-only" />
@@ -114,7 +126,7 @@ const SignupForm = ({ onSubmit, loading }) => {
           <label className="relative">
             <input type="radio" value="DOCTOR" {...register('role')} className="peer sr-only" />
             <div className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-surface-200 rounded-xl text-sm font-medium text-surface-600 cursor-pointer transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 peer-checked:text-primary-600 hover:border-surface-300">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" /><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" /><circle cx="20" cy="10" r="2" /></svg>
               Doctor
             </div>
           </label>
@@ -131,7 +143,11 @@ const SignupForm = ({ onSubmit, loading }) => {
           className="space-y-4"
         >
           <Input
-            label="Date of Birth"
+            label={
+              <>
+                Date of Birth <span className="text-danger-500">*</span>
+              </>
+            }
             type="date"
             icon={Calendar}
             error={errors.dateOfBirth?.message}
@@ -163,14 +179,22 @@ const SignupForm = ({ onSubmit, loading }) => {
           className="space-y-4"
         >
           <Input
-            label="Specialisation"
+            label={
+              <>
+                Specialisation <span className="text-danger-500">*</span>
+              </>
+            }
             type="text"
             placeholder="e.g. General Medicine, Cardiology"
             error={errors.specialisation?.message}
             {...register('specialisation')}
           />
           <Input
-            label="Registration Number"
+            label={
+              <>
+                Registration Number <span className="text-danger-500">*</span>
+              </>
+            }
             type="text"
             placeholder="Medical license/registration number"
             error={errors.registrationNumber?.message}
@@ -181,7 +205,11 @@ const SignupForm = ({ onSubmit, loading }) => {
 
       <div className="relative">
         <Input
-          label="Password"
+          label={
+            <>
+              Password <span className="text-danger-500">*</span>
+            </>
+          }
           type={showPassword ? 'text' : 'password'}
           icon={Lock}
           placeholder="At least 8 characters"
@@ -199,7 +227,11 @@ const SignupForm = ({ onSubmit, loading }) => {
 
       <div className="relative">
         <Input
-          label="Confirm Password"
+          label={
+            <>
+              Confirm Password <span className="text-danger-500">*</span>
+            </>
+          }
           type={showConfirm ? 'text' : 'password'}
           icon={Lock}
           placeholder="Confirm your password"
@@ -221,7 +253,7 @@ const SignupForm = ({ onSubmit, loading }) => {
           I agree to the{' '}
           <a href="#" className="font-medium text-primary-600 hover:text-primary-700">Terms of Service</a>{' '}
           and{' '}
-          <a href="#" className="font-medium text-primary-600 hover:text-primary-700">Privacy Policy</a>
+          <a href="#" className="font-medium text-primary-600 hover:text-primary-700">Privacy Policy <span className="text-danger-500">*</span></a>
         </span>
       </label>
       {errors.agreeTerms && <p className="text-xs text-danger-500">{errors.agreeTerms.message}</p>}

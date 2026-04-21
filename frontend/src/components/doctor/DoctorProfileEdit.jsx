@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { useDoctorProfile, useUpdateDoctorProfile } from '../../hooks/useDoctors';
+import { isValidPhone, isValidEmail, digitsOnly } from '../../utils/validators';
 
 const specializations = ['General Medicine', 'Cardiology', 'Pediatrics', 'Endocrinology', 'Neurology', 'Orthopedics', 'Dermatology', 'Psychiatry', 'Ophthalmology', 'Radiology', 'Pulmonology', 'Nephrology'];
 
@@ -20,6 +21,7 @@ const DoctorProfileEdit = () => {
     department: '', qualifications: '', licenseNumber: '', yearsOfExperience: 0,
     bio: '', consultationHours: '', languages: '', address: '',
   });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (profile) {
@@ -42,9 +44,40 @@ const DoctorProfileEdit = () => {
     }
   }, [profile]);
 
-  const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const update = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    const cleanName = form.name.replace(/^Dr\.\s*/i, '').trim();
+    if (!cleanName || cleanName.length < 2) {
+      newErrors.name = 'Full name is required (at least 2 characters)';
+    }
+    if (form.email && !isValidEmail(form.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (form.phone && !isValidPhone(form.phone)) {
+      newErrors.phone = 'Please enter a valid phone number (10-15 digits)';
+    }
+    const exp = Number(form.yearsOfExperience);
+    if (isNaN(exp) || exp < 0 || exp > 70) {
+      newErrors.yearsOfExperience = 'Experience must be a number between 0 and 70';
+    }
+    if (!form.licenseNumber.trim()) {
+      newErrors.licenseNumber = 'License/Registration number is required';
+    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      toast.error('Please fix the highlighted errors before saving');
+    }
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSave = async () => {
+    if (!validateForm()) return;
+
     const nameParts = form.name.replace(/^Dr\.\s*/i, '').trim().split(/\s+/);
     try {
       await updateMutation.mutateAsync({
@@ -59,6 +92,12 @@ const DoctorProfileEdit = () => {
       navigate('/doctor/dashboard');
     } catch (err) { toast.error(extractErrorMessage(err, 'Failed to update profile. Please check your input.')); }
   };
+
+  const inputError = (field) => errors[field] ? (
+    <p className="text-xs text-danger-500 mt-1">{errors[field]}</p>
+  ) : null;
+
+  const errClass = (field) => errors[field] ? 'border-danger-400 focus:ring-danger-500/20 focus:border-danger-500' : '';
 
   if (isLoading) return <div className="flex items-center justify-center min-h-[40vh]"><Loader2 className="w-8 h-8 animate-spin text-primary-500" /></div>;
   if (isError) return <div className="text-center py-20 text-surface-500">Failed to load profile.</div>;
@@ -108,16 +147,20 @@ const DoctorProfileEdit = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Full Name</label>
-              <input value={form.name} onChange={e => update('name', e.target.value)} className="input-base" />
+              <label className="block text-sm font-medium text-surface-700">Full Name<span className="text-danger-500">*</span></label>
+              <input value={form.name} onChange={e => update('name', e.target.value)} className={`input-base ${errClass('name')}`} />
+              {inputError('name')}
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Email Address</label>
-              <input value={form.email} onChange={e => update('email', e.target.value)} className="input-base" type="email" />
+              <label className="block text-sm font-medium text-surface-700">Email Address<span className="text-danger-500">*</span></label>
+              <input value={form.email} onChange={e => update('email', e.target.value)} className={`input-base ${errClass('email')}`} type="email" />
+              {inputError('email')}
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">Phone Number</label>
-              <input value={form.phone} onChange={e => update('phone', e.target.value)} className="input-base" />
+              <label className="block text-sm font-medium text-surface-700">Phone Number<span className="text-danger-500">*</span></label>
+              <input value={form.phone} onChange={e => update('phone', digitsOnly(e.target.value))}
+                className={`input-base ${errClass('phone')}`} type="tel" placeholder="e.g. 9876543210" maxLength={15} />
+              {inputError('phone')}
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-surface-700">Date of Birth</label>
@@ -160,12 +203,19 @@ const DoctorProfileEdit = () => {
               <input value={form.qualifications} onChange={e => update('qualifications', e.target.value)} className="input-base" placeholder="MD, MBBS, DM" />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-surface-700">License Number</label>
-              <input value={form.licenseNumber} onChange={e => update('licenseNumber', e.target.value)} className="input-base" />
+              <label className="block text-sm font-medium text-surface-700">License Number <span className="text-danger-500">*</span></label>
+              <input value={form.licenseNumber} onChange={e => update('licenseNumber', e.target.value)} className={`input-base ${errClass('licenseNumber')}`} />
+              {inputError('licenseNumber')}
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-surface-700">Years of Experience</label>
-              <input value={form.yearsOfExperience} onChange={e => update('yearsOfExperience', e.target.value)} className="input-base" type="number" min="0" />
+              <input value={form.yearsOfExperience}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || (/^\d{0,2}$/.test(val) && Number(val) <= 70)) update('yearsOfExperience', val);
+                }}
+                className={`input-base ${errClass('yearsOfExperience')}`} type="number" min="0" max="70" step="1" />
+              {inputError('yearsOfExperience')}
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-surface-700 flex items-center gap-1"><Clock className="w-3.5 h-3.5" />Consultation Hours</label>
