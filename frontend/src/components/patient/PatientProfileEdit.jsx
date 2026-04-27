@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { usePatientProfile, useUpdatePatientProfile } from '../../hooks/usePatients';
-import { isValidPhone, isValidEmail, digitsOnly } from '../../utils/validators';
+import { isValidPhone, isValidEmail, isValidZipCode, digitsOnly } from '../../utils/validators';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -108,6 +108,9 @@ const PatientProfileEdit = () => {
     }
     if (form.phone && !isValidPhone(form.phone)) {
       newErrors.phone = 'Please enter a valid phone number (10-15 digits)';
+    }
+    if (form.address.zipCode && !isValidPhone(form.address.zipCode)) {
+      newErrors.address.zipCode = 'Please enter a valid Zip Code (5-9 digits)';
     }
     if (form.email && !isValidEmail(form.email)) {
       newErrors.email = 'Please enter a valid email address';
@@ -252,7 +255,7 @@ const PatientProfileEdit = () => {
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-surface-700">Zip / Postal Code</label>
-                <input value={form.address.zipCode} onChange={e => updateAddress('zipCode', e.target.value)} className="input-base" placeholder="Zip Code" maxLength={10} />
+                <input value={form.address.zipCode} onChange={e => updateAddress('zipCode', e.target.value)} className="input-base" type="tel" placeholder="Zip Code" minLength={5} maxLength={9} />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-surface-700">Country</label>

@@ -20,7 +20,7 @@ export const PATTERNS = {
 
 export const isValidPhone = (v) => !v || PATTERNS.phone.test(v.replace(/[\s\-()]/g, ''));
 export const isValidEmail = (v) => !v || PATTERNS.email.test(v);
-export const isValidZipCode = (v) => !v || PATTERNS.zipCode.test(v);
+export const isValidZipCode = (v) => !v || PATTERNS.zipCode.test(v.replace(/[\s\-()]/g, ''));
 
 export const isValidCardNumber = (v) => {
   const digits = v.replace(/\s/g, '');
