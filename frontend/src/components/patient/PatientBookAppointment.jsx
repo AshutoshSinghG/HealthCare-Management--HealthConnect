@@ -34,6 +34,8 @@ const PatientBookAppointment = () => {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+
   // Payment form state
   const [payForm, setPayForm] = useState({ cardName: '', cardNumber: '', expiry: '', cvv: '' });
   const [payErrors, setPayErrors] = useState({});
@@ -71,10 +73,10 @@ const PatientBookAppointment = () => {
   const bookMutation = useBookAppointment();
 
   // Actions
-  const handleSlotSelect = (slot) => {
+  const handleSlotSelect = async (slot) => {
     if (slot.status === 'booked' || slot.status === 'pending') return;
     setSelectedSlot(slot);
-    setPaymentModalOpen(true);
+    setConfirmModalOpen(true);
     setPaymentSuccess(false);
     setPayForm({ cardName: '', cardNumber: '', expiry: '', cvv: '' });
     setPayErrors({});
@@ -384,6 +386,59 @@ const PatientBookAppointment = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/*Conformation Model */}
+      <Modal
+        isOpen={confirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
+        title="Confirm Appointment"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-surface-50 p-4 rounded-xl border">
+            <p><b>Doctor:</b> {selectedDoctor?.name}</p>
+            <p><b>Date:</b> {new Date(selectedDate).toLocaleDateString()}</p>
+            <p><b>Time:</b> {selectedSlot?.time}</p>
+            <p><b>Fee:</b> ₹{selectedDoctor?.fee}</p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={() => setConfirmModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={async () => {
+                // if fee=0 then direct booking
+                if (selectedDoctor?.fee === 0) {
+                  try {
+                    await bookMutation.mutateAsync({
+                      slotId: selectedSlot.id,
+                      reason: '',
+                    });
+                    toast.success('Appointment booked successfully!');
+                    setConfirmModalOpen(false);
+                    navigate('/patient/appointments');
+
+                  } catch (err) {
+                    toast.error(extractErrorMessage(err));
+                  }
+
+                  return;
+                }
+                // if fee=0 then payment modal open
+                setConfirmModalOpen(false);
+                setPaymentModalOpen(true);
+              }}
+            >
+              {selectedDoctor?.fee === 0 ? 'Confirm Booking' : 'Confirm & Pay'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Payment Modal */}
       <Modal isOpen={paymentModalOpen} onClose={() => !bookMutation.isPending && !paymentSuccess && setPaymentModalOpen(false)} title="Confirm & Pay" size="md">

@@ -190,7 +190,7 @@ const PatientMyAppointments = () => {
                             <span>{appt.type}</span>
                           </div>
                           <div className="flex items-center gap-1.5 font-medium text-surface-700">
-                            Fee: ${appt.fee}
+                            Fee: ₹{appt.fee}
                           </div>
                         </div>
                       </div>
