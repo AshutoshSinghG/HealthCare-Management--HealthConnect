@@ -2,12 +2,51 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Activity, ArrowRight, Mail, Phone, MapPin, Github, Twitter, Linkedin, Heart } from 'lucide-react';
 
-const footerLinks = {
-  Product: ['Features', 'Dashboards', 'Security', 'Pricing', 'Changelog'],
-  Resources: ['Documentation', 'API Reference', 'Help Center', 'Blog', 'Status'],
-  Company: ['About Us', 'Careers', 'Contact', 'Partners', 'Press'],
-  Legal: ['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'HIPAA Notice'],
+const footerLinkRoutes = {
+  Product: [
+    { label: 'Features', to: '/#features' },
+    { label: 'Dashboards', to: '/#dashboards' },
+    { label: 'Security', to: '/#security' },
+    { label: 'Benefits', to: '/#benefits' },
+    { label: 'Testimonials', to: '/#testimonials' },
+  ],
+  Resources: [
+    { label: 'Documentation', to: '/' },
+    { label: 'API Reference', to: '/' },
+    { label: 'Help Center', to: '/contact' },
+    { label: 'Blog', to: '/' },
+    { label: 'Status', to: '/' },
+  ],
+  Company: [
+    { label: 'About Us', to: '/about' },
+    { label: 'Careers', to: '/careers' },
+    { label: 'Contact', to: '/contact' },
+    { label: 'Partners', to: '/partners' },
+    { label: 'Press', to: '/press' },
+  ],
+  Legal: [
+    { label: 'Privacy Policy', to: '/privacy-policy' },
+    { label: 'Terms of Service', to: '/terms-of-service' },
+    { label: 'Cookie Policy', to: '/cookie-policy' },
+    { label: 'HIPAA Notice', to: '/hipaa-notice' },
+  ],
 };
+
+const socialLinks = [
+  {
+    icon: Github,
+    url: "https://github.com/AshutoshSinghG",
+  },
+  {
+    icon: Twitter,
+    url: "https://twitter.com/ashutoshsinghf",
+  },
+  {
+    icon: Linkedin,
+    url: "https://www.linkedin.com/in/ashutoshkumar-me/",
+  },
+];
+
 
 const CTAFooter = () => (
   <>
@@ -22,7 +61,7 @@ const CTAFooter = () => (
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 animated-gradient" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.1),transparent_60%)]" />
-          
+
           {/* ECG decoration */}
           <svg className="absolute bottom-6 left-0 w-full h-12 opacity-10" viewBox="0 0 800 40" fill="none">
             <path d="M0 20 L150 20 L180 5 L200 35 L220 8 L240 32 L260 20 L800 20" stroke="white" strokeWidth="1.5" />
@@ -90,13 +129,13 @@ const CTAFooter = () => (
           </div>
 
           {/* Link Columns */}
-          {Object.entries(footerLinks).map(([title, links]) => (
+          {Object.entries(footerLinkRoutes).map(([title, links]) => (
             <div key={title}>
               <h4 className="font-semibold text-white mb-4 text-sm">{title}</h4>
               <ul className="space-y-2.5">
                 {links.map(link => (
-                  <li key={link}>
-                    <a href="#" className="text-sm text-surface-400 hover:text-primary-400 transition-colors">{link}</a>
+                  <li key={link.label}>
+                    <Link to={link.to} className="text-sm text-surface-400 hover:text-primary-400 transition-colors">{link.label}</Link>
                   </li>
                 ))}
               </ul>
@@ -107,11 +146,11 @@ const CTAFooter = () => (
         {/* Bottom Bar */}
         <div className="border-t border-surface-800 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-surface-500">
-            © {new Date().getFullYear()} HealthConnect. All rights reserved. Built with ❤️ for better healthcare.
+            © {new Date().getFullYear()} HealthConnect. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
-            {[Github, Twitter, Linkedin].map((Icon, i) => (
-              <a key={i} href="#" className="w-9 h-9 rounded-xl bg-surface-800 flex items-center justify-center text-surface-400 hover:text-primary-400 hover:bg-surface-700 transition-all">
+            {socialLinks.map(({ icon: Icon, url }, i) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-surface-800 flex items-center justify-center text-surface-400 hover:text-primary-400 hover:bg-surface-700 transition-all">
                 <Icon className="w-4 h-4" />
               </a>
             ))}

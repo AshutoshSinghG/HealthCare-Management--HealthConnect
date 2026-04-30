@@ -4,6 +4,17 @@ import { Toaster } from 'react-hot-toast';
 // Landing Page
 import LandingPage from './pages/LandingPage';
 
+// Static Pages (Company & Legal)
+import AboutPage from './pages/static/AboutPage';
+import CareersPage from './pages/static/CareersPage';
+import ContactPage from './pages/static/ContactPage';
+import PartnersPage from './pages/static/PartnersPage';
+import PressPage from './pages/static/PressPage';
+import PrivacyPolicyPage from './pages/static/PrivacyPolicyPage';
+import TermsPage from './pages/static/TermsPage';
+import CookiePolicyPage from './pages/static/CookiePolicyPage';
+import HipaaNoticePage from './pages/static/HipaaNoticePage';
+
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
 
@@ -147,6 +158,20 @@ function App() {
 
         {/* Landing Page */}
         <Route path="/" element={<LandingPage />} />
+
+        {/* Company Pages */}
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/careers" element={<CareersPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/partners" element={<PartnersPage />} />
+        <Route path="/press" element={<PressPage />} />
+
+        {/* Legal Pages */}
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsPage />} />
+        <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+        <Route path="/hipaa-notice" element={<HipaaNoticePage />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
