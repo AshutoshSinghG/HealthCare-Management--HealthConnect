@@ -1,6 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
+// Landing Page
+import LandingPage from './pages/LandingPage';
+
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
 
@@ -142,9 +145,9 @@ function App() {
           <Route path="/admin/export" element={<AdminExport />} />
         </Route>
 
-        {/* Default Redirect */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
