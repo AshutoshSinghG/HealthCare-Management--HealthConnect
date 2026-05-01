@@ -15,6 +15,13 @@ import TermsPage from './pages/static/TermsPage';
 import CookiePolicyPage from './pages/static/CookiePolicyPage';
 import HipaaNoticePage from './pages/static/HipaaNoticePage';
 
+// Resources Pages
+import DocumentationPage from './pages/static/DocumentationPage';
+import ApiReferencePage from './pages/static/ApiReferencePage';
+import HelpCenterPage from './pages/static/HelpCenterPage';
+import BlogPage from './pages/static/BlogPage';
+import StatusPage from './pages/static/StatusPage';
+
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
 
@@ -171,6 +178,13 @@ function App() {
         <Route path="/terms-of-service" element={<TermsPage />} />
         <Route path="/cookie-policy" element={<CookiePolicyPage />} />
         <Route path="/hipaa-notice" element={<HipaaNoticePage />} />
+
+        {/* Resources Pages */}
+        <Route path="/documentation" element={<DocumentationPage />} />
+        <Route path="/api-reference" element={<ApiReferencePage />} />
+        <Route path="/help-center" element={<HelpCenterPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/status" element={<StatusPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

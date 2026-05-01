@@ -11,11 +11,11 @@ const footerLinkRoutes = {
     { label: 'Testimonials', to: '/#testimonials' },
   ],
   Resources: [
-    { label: 'Documentation', to: '/' },
-    { label: 'API Reference', to: '/' },
-    { label: 'Help Center', to: '/contact' },
-    { label: 'Blog', to: '/' },
-    { label: 'Status', to: '/' },
+    { label: 'Documentation', to: '/documentation' },
+    { label: 'API Reference', to: '/api-reference' },
+    { label: 'Help Center', to: '/help-center' },
+    { label: 'Blog', to: '/blog' },
+    { label: 'Status', to: '/status' },
   ],
   Company: [
     { label: 'About Us', to: '/about' },
