@@ -139,7 +139,7 @@ const HeroSection = () => (
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <span className="text-blue-600 text-lg heartbeat">❤️</span>
+                  <span className="text-blue-600 text-lg heartbeat">👨</span>
                 </div>
                 <div>
                   <p className="text-xs text-surface-500">Patient Satisfaction</p>
