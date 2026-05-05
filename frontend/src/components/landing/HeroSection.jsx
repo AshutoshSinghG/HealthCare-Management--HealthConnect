@@ -1,26 +1,91 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Activity, ArrowRight, Play, ChevronDown } from 'lucide-react';
 
+// Medical/healthcare background video clips (Mixkit free license)
+const VIDEO_CLIPS = [
+  '/videos/med_26552.mp4',
+  '/videos/med_26549.mp4',
+  '/videos/med_26551.mp4',
+  '/videos/med_4800.mp4',
+  '/videos/med_4791.mp4',
+  '/videos/med_4787.mp4',
+];
+
+const HeroVideoBackground = () => {
+  const videoRef = useRef(null);
+  const [clipIndex, setClipIndex] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  // Cycle to next clip when current one ends
+  const handleEnded = () => {
+    setClipIndex(prev => (prev + 1) % VIDEO_CLIPS.length);
+  };
+
+  // When clip index changes, load & play the new clip
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.src = VIDEO_CLIPS[clipIndex];
+    vid.load();
+    vid.play().catch(() => {}); // graceful fail if autoplay blocked
+  }, [clipIndex]);
+
+  return (
+    <>
+      {/* Video element */}
+      <video
+        ref={videoRef}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        src={VIDEO_CLIPS[0]}
+        autoPlay
+        muted
+        playsInline
+        onEnded={handleEnded}
+        onCanPlay={() => setLoaded(true)}
+        style={{ zIndex: 0 }}
+      />
+
+      {/* Multi-layer dark overlay so text always stays readable */}
+      {/* Layer 1: Base dark tint */}
+      <div className="absolute inset-0 bg-surface-900/60" style={{ zIndex: 1 }} />
+      {/* Layer 2: Brand gradient on top to keep the primary color identity */}
+      <div className="absolute inset-0 bg-gradient-to-br from-surface-900/70 via-primary-900/50 to-primary-800/40" style={{ zIndex: 2 }} />
+      {/* Layer 3: Left-side strong fade so the left content text is crystal clear */}
+      <div className="absolute inset-0 bg-gradient-to-r from-surface-900/80 via-surface-900/40 to-transparent" style={{ zIndex: 3 }} />
+      {/* Layer 4: Bottom fade for ECG line area */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-surface-900/80 to-transparent" style={{ zIndex: 4 }} />
+      {/* Layer 5: Top fade for navbar readability */}
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-surface-900/60 to-transparent" style={{ zIndex: 4 }} />
+
+      {/* Radial accent overlays (kept from original design) */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(59,130,246,0.12),transparent_50%)]" style={{ zIndex: 5 }} />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(16,185,129,0.08),transparent_50%)]" style={{ zIndex: 5 }} />
+    </>
+  );
+};
+
 const HeroSection = () => (
-  <section id="hero" className="relative min-h-screen flex items-center overflow-hidden">
-    {/* Background gradient */}
-    <div className="absolute inset-0 bg-gradient-to-br from-surface-900 via-primary-900 to-primary-800 animated-gradient" />
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(59,130,246,0.15),transparent_50%)]" />
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(16,185,129,0.1),transparent_50%)]" />
+  <section id="hero" className="relative min-h-screen flex items-center overflow-hidden bg-surface-900">
 
-    {/* Decorative circles */}
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/[0.03] rounded-full" />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/[0.04] rounded-full" />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/[0.05] rounded-full" />
+    {/* === VIDEO BACKGROUND === */}
+    <HeroVideoBackground />
 
-    {/* ECG line in hero */}
-    <svg className="absolute bottom-32 left-0 w-full h-16 opacity-[0.08]" viewBox="0 0 1600 60" fill="none">
+    {/* Decorative circles (above video, below content) */}
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/[0.03] rounded-full" style={{ zIndex: 6 }} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/[0.04] rounded-full" style={{ zIndex: 6 }} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/[0.05] rounded-full" style={{ zIndex: 6 }} />
+
+    {/* ECG line */}
+    <svg className="absolute bottom-32 left-0 w-full h-16 opacity-[0.10]" viewBox="0 0 1600 60" fill="none" style={{ zIndex: 6 }}>
       <path className="ecg-line" d="M0 30 L300 30 L340 30 L360 8 L380 52 L400 5 L420 55 L440 25 L460 35 L500 30 L800 30 L840 30 L860 8 L880 52 L900 5 L920 55 L940 25 L960 35 L1000 30 L1300 30 L1340 30 L1360 8 L1380 52 L1400 5 L1420 55 L1440 25 L1460 35 L1500 30 L1600 30" stroke="white" strokeWidth="2" />
     </svg>
 
+    {/* === MAIN CONTENT (z-10 ensures above all overlays) === */}
     <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-24 pb-16">
       <div className="grid lg:grid-cols-2 gap-12 items-center">
+
         {/* Left Content */}
         <motion.div
           initial={{ opacity: 0, x: -40 }}
@@ -57,7 +122,7 @@ const HeroSection = () => (
             Management
           </h1>
 
-          <p className="text-lg sm:text-xl text-primary-100/70 mb-8 max-w-xl leading-relaxed">
+          <p className="text-lg sm:text-xl text-primary-100/80 mb-8 max-w-xl leading-relaxed">
             HealthConnect is an all-in-one platform that seamlessly connects patients, doctors,
             and administrators with smart scheduling, real-time chat, treatment tracking,
             and HIPAA-compliant security.
