@@ -24,7 +24,7 @@ const HeroVideoBackground = ({ clipIndex, handleEnded }) => {
     if (!vid) return;
     vid.src = VIDEO_CLIPS[clipIndex];
     vid.load();
-    vid.play().catch(() => {}); // graceful fail if autoplay blocked
+    vid.play().catch(() => { }); // graceful fail if autoplay blocked
   }, [clipIndex]);
 
   return (
@@ -32,9 +32,8 @@ const HeroVideoBackground = ({ clipIndex, handleEnded }) => {
       {/* Video element */}
       <video
         ref={videoRef}
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-          loaded ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${loaded ? 'opacity-100' : 'opacity-0'
+          }`}
         muted
         playsInline
         onEnded={handleEnded}
@@ -74,7 +73,7 @@ const HeroSection = () => {
       if (!vid) return;
       if (i === clipIndex) {
         vid.currentTime = 0;
-        vid.play().catch(() => {});
+        vid.play().catch(() => { });
       } else {
         vid.pause();
       }
@@ -211,59 +210,60 @@ const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="hidden lg:block relative"
           >
-            <div className="relative aspect-video w-full">
+            <div className="relative w-full">
               <div className="absolute -inset-4 bg-gradient-to-br from-primary-500/20 to-green-500/20 rounded-3xl blur-2xl" />
 
-              {VIDEO_CLIPS.map((clip, index) => (
-                <video
-                  key={index}
-                  src={clip}
-                  ref={(el) => (rightVideoRefs.current[index] = el)}
-                  autoPlay={index === 0}
-                  muted
-                  playsInline
-                  // FIX 7: onEnded sirf active clip pe lagao
-                  onEnded={index === clipIndex ? handleVideoEnd : undefined}
-                  className={`absolute inset-0 w-full h-full object-contain rounded-3xl shadow-2xl shadow-black/30 border border-white/10 transition-opacity duration-1000 ${
-                    index === clipIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                  }`}
-                />
-              ))}
+              {/* Wrapper jo active video ke size ko adopt kare */}
+              <div className="relative w-full">
+                {VIDEO_CLIPS.map((clip, index) => (
+                  <video
+                    key={index}
+                    src={clip}
+                    ref={(el) => (rightVideoRefs.current[index] = el)}
+                    autoPlay={index === 0}
+                    muted
+                    playsInline
+                    onEnded={index === clipIndex ? handleVideoEnd : undefined}
+                    className={`rounded-3xl shadow-2xl shadow-black/30 border border-white/10 transition-opacity duration-1000 ${index === clipIndex
+                        ? 'opacity-100 relative w-full h-auto block'
+                        : 'opacity-0 absolute inset-0 w-full h-full'
+                      }`}
+                  />
+                ))}
 
-              {/* Floating stat cards */}
-              <motion.div
-                animate={{ y: [-8, 8, -8] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -left-8 top-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl"
-                style={{ zIndex: 20 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-green-600" />
+                {/* Floating cards — zIndex theek rakho */}
+                <motion.div
+                  animate={{ y: [-8, 8, -8] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute -left-8 top-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl z-20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-surface-500">Appointments Today</p>
+                      <p className="text-lg font-bold text-surface-900">548</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-surface-500">Appointments Today</p>
-                    <p className="text-lg font-bold text-surface-900">548</p>
-                  </div>
-                </div>
-              </motion.div>
+                </motion.div>
 
-              <motion.div
-                animate={{ y: [8, -8, 8] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -right-6 bottom-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl"
-                style={{ zIndex: 20 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <Smile className="w-5 h-5 text-blue-600" />
+                <motion.div
+                  animate={{ y: [8, -8, 8] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute -right-6 bottom-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl z-20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <Smile className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-surface-500">Patient Satisfaction</p>
+                      <p className="text-lg font-bold text-surface-900">99.5%</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-surface-500">Patient Satisfaction</p>
-                    <p className="text-lg font-bold text-surface-900">99.5%</p>
-                  </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </div>
           </motion.div>
 
