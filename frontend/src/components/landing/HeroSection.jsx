@@ -235,7 +235,7 @@ const HeroSection = () => {
                 <motion.div
                   animate={{ y: [-8, 8, -8] }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute -left-8 top-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl z-20"
+                  className="absolute -left-12 top-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl z-20"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
@@ -251,7 +251,7 @@ const HeroSection = () => {
                 <motion.div
                   animate={{ y: [8, -8, 8] }}
                   transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute -right-6 bottom-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl z-20"
+                  className="absolute -right-10 bottom-0 px-4 py-3 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl z-20"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
