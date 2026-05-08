@@ -11,6 +11,7 @@ const VIDEO_CLIPS = [
   '/videos/Videon4.mp4',
   '/videos/Videon5.mp4',
   '/videos/Videon6.mp4',
+  '/videos/Videon7.mp4',
 ];
 
 // ─────────────────────────────────────────────
